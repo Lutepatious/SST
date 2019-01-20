@@ -1,0 +1,375 @@
+.SUFFIXES: .exe .com .obj .txt .c .h .lst
+
+CC = cl
+ASM =masm
+
+CFLAGS_MODE=		#default REAL MODE
+CFLAGS_S=$(CFLAGS_MODE) /AS	#SMALL MODEL
+CFLAGS_T=$(CFLAGS_MODE) /AT	#Tiny MODEL
+
+CFLAGS_X =/G2s /W4 /Oaxz 	#Maximum optimize
+CFLAGS_R =/G2s /W4 /Owx	 	#Safety optimize
+CFLAGS_D =/G2s /W4 /Od /Zi	#No optimize
+CFLAGS_A =/Zl /Fa /Fonul	#Get assembly list
+
+ARGV =setargv.obj	#
+LDFLAGS =/E		#EXEPACK
+ASMFLAGS =/Ml
+DATATBL=datatbl.obj
+
+all: exec
+
+exec: datatbl.i getdisk.com getdisk2.com sssplit.exe \
+ ssdump.exe ssmerge.com ssview.exe \
+ viwm_.exe viwmp.exe viwp_.exe viwuc.exe
+#ssdump.t trall1 trall2 zaall ndall1 ndall2 saall
+
+datatbl.i: $*.c
+	$(CC) /DTABLEINFO /EP $** >$@
+
+.c.obj:
+	$(CC) /Fo$* /Fc$* /AS $(CFLAGS_R) /c $<
+
+#getdisk and sssplit with savechk (removed)
+#MSDOS only
+getdisk2.com: $*.c
+	$(CC) /Fe$* $(CFLAGS_T) $** 
+
+getdisk.com: $*.c
+	$(CC) /Fe$* $(CFLAGS_T) $** 
+
+sssplit.exe: $*.obj
+	$(CC) /Fe$* $(CFLAGS_S) /F 8000 $** 
+
+ssdump.exe: $*.obj $(DATATBL)
+	$(CC) /Fe$* $(CFLAGS_S) /F 2000 $** $(ARGV) -link /noe
+
+ssmerge.com: $*.c
+	$(CC) /Fe$* $(CFLAGS_T) $** $(ARGV) -link /noe
+
+#graphics 98-DOS only	CANNOT TINY MODEL
+ssview.exe: $*.obj
+	$(CC) /Fe$* $(CFLAGS_S) $** $(ARGV) /link /e /noe graphics
+
+viwm_.exe: $*.obj
+	$(CC) /Fe$* $(CFLAGS_S) $** $(ARGV) /link /e /noe graphics
+
+viwp_.exe: $*.obj
+	$(CC) /Fe$* $(CFLAGS_S) $** $(ARGV) /link /e /noe graphics
+
+viwmp.exe: $*.obj
+	$(CC) /Fe$* $(CFLAGS_S) $** $(ARGV) /link /e /noe graphics
+
+viwuc.exe: $*.obj
+	$(CC) /Fe$* $(CFLAGS_S) $** $(ARGV) /link /e /noe graphics
+
+#graphics end
+
+# data search section
+
+TARGETDISK = \
+	.\disk\00.dat \
+	.\disk\10.dat .\disk\11.dat .\disk\12.dat .\disk\13.dat \
+	.\disk\20.dat .\disk\21.dat .\disk\22.dat .\disk\23.dat \
+	.\disk\31.dat .\disk\32.dat \
+	.\disk\41.dat .\disk\42.dat .\disk\43.dat .\disk\44.dat .\disk\45.dat \
+	.\disk\51.dat
+
+TARGETT20=20\GAME.dat 20\LETT?.dat 20\QUIZ?.dat
+TARGETT23=23\SHOP??.dat
+TARGETT31=31\MN*.dat
+
+TARGETSS_1   =00\ss*.dat 10\ss*.dat 11\ss*.dat 12\ss*.dat 13\ss*.dat 20\ss*.dat 21\ss*.dat 22\ss*.dat 23\ss*.dat
+TARGETSS_2   =31\ss*.dat 32\ss*.dat 41\ss*.dat 42\ss*.dat 43\ss*.dat 44\ss*.dat 45\ss*.dat
+TARGETTR_1   =11\tr*.dat 12\tr*.dat 13\tr*.dat 21\tr*.dat 22\tr*.dat 23\tr*.dat
+TARGETTR_2   =31\tr*.dat 32\tr*.dat 41\tr*.dat 42\tr*.dat 43\tr*.dat 44\tr*.dat 45\tr*.dat
+TARGETM__1   =10\m_*.dat 11\m_*.dat 12\m_*.dat 13\m_*.dat 21\m_*.dat 22\m_*.dat 23\m_*.dat
+TARGETM__2   =31\m_*.dat 32\m_*.dat 41\m_*.dat 42\m_*.dat 43\m_*.dat 44\m_*.dat 45\m_*.dat
+TARGETMA_1   =10\ma*.dat 11\ma*.dat 12\ma*.dat 13\ma*.dat 21\ma*.dat 22\ma*.dat 23\ma*.dat
+TARGETMA_2   =31\ma*.dat 32\ma*.dat 41\ma*.dat 42\ma*.dat 43\ma*.dat 44\ma*.dat 45\ma*.dat
+TARGETC__1   =10\c_*.dat 11\c_*.dat 12\c_*.dat 13\c_*.dat 21\c_*.dat 22\c_*.dat 23\c_*.dat
+TARGETC__2   =31\c_*.dat 32\c_*.dat 41\c_*.dat 42\c_*.dat 43\c_*.dat 44\c_*.dat 45\c_*.dat
+TARGETP__1   =10\p_*.dat 11\p_*.dat 12\p_*.dat 13\p_*.dat 21\p_*.dat 22\p_*.dat 23\p_*.dat
+TARGETP__2   =31\p_*.dat 32\p_*.dat 41\p_*.dat 42\p_*.dat 43\p_*.dat 44\p_*.dat 45\p_*.dat
+TARGETS__1   =11\s_*.dat 12\s_*.dat 13\s_*.dat 21\s_*.dat 22\s_*.dat 23\s_*.dat
+TARGETS__2   =31\s_*.dat 32\s_*.dat 41\s_*.dat 42\s_*.dat 43\s_*.dat 44\s_*.dat 45\s_*.dat
+TARGETMENU_1 =11\menu*.dat 12\menu*.dat 13\menu*.dat 21\menu*.dat 22\menu*.dat 23\menu*.dat
+TARGETMENU_2 =31\menu*.dat 32\menu*.dat 41\menu*.dat 42\menu*.dat 43\menu*.dat 44\menu*.dat 45\menu*.dat
+TARGETNC_1   =10\CH*.dat 12\nc*.dat 13\nc*.dat 21\nc*.dat 22\nc*.dat 23\nc*.dat
+TARGETNC_2   =31\nc*.dat 32\nc*.dat 41\nc*.dat 42\nc*.dat 43\nc*.dat 44\nc*.dat 45\nc*.dat 43\fiane.dat
+TARGETND_1   =00\save?.dat 12\nd*.dat 13\nd*.dat 21\nd*.dat 22\nd*.dat 23\nd*.dat
+TARGETND_2   =31\nd*.dat 32\nd*.dat 41\nd*.dat 42\nd*.dat 43\nd*.dat 44\nd*.dat 45\nd*.dat
+TARGETNP_1   =10\ep*.dat 12\np*.dat 13\np*.dat 21\np*.dat 22\np*.dat 23\np*.dat
+TARGETNP_2   =31\np*.dat 32\np*.dat 41\np*.dat 42\np*.dat 43\np*.dat 44\np*.dat 45\np*.dat
+TARGETPR_1   =10\BIOS*.dat 10\PRNO*.dat 20\prno*.dat 22\prno*.dat 23\prno*.dat
+TARGETPR_2   =41\PRNO*.dat 42\PRNO*.dat 43\prno*.dat 44\prno*.dat 45\prno*.dat
+
+
+TARGETUS=51\SAVE?.dat 51\VOL3-?.dat
+TARGETZA=20\ZAIKO.dat usr\ZAIKOI.dat
+TARGETBOOT=00\boot.dat 10\boot.dat 22\boot.dat
+
+TARGETVIEW = $(TARGETND) $(TARGETUS)
+TARGETITEM = $(TARGETZA) usr\ZAIKOM.dat usr\ZAIKOP.dat 51\ZAIKO.dat
+
+TARGETSS = $(TAREGTSS_1) $(TAREGTSS_2)
+TARGETTR = $(TAREGTTR_1) $(TAREGTTR_2)
+TARGETM_ = $(TAREGTM__1) $(TAREGTM__2)
+TARGETMA = $(TAREGTMA_1) $(TAREGTMA_2)
+TARGETC_ = $(TAREGTC__1) $(TAREGTC__2)
+TARGETP_ = $(TAREGTS__1) $(TAREGTS__2)
+TARGETS_ = $(TAREGTS__1) $(TAREGTS__2)
+TARGETNC = $(TAREGTNC_1) $(TAREGTNC_2)
+TARGETND = $(TAREGTND_1) $(TAREGTND_2)
+TARGETPR = $(TAREGTPR_1) $(TAREGTPR_2)
+TARGETMENU = $(TAREGTMENU_1) $(TAREGTMENU_2)
+
+TARGETTEXT = \
+	$(TARGETS_) $(TARGETT20) \
+	$(TARGETT23) $(TARGETT31) $(TARGETBOOT) $(TARGETMENU)
+
+#SSSPLIT.T: $(TARGETDISK)
+#	!trsplit $** $(**B)
+#	touch $@
+#
+#DMPM_.T: ssdump.exe $(TARGETM_)
+#	ssdump -m $(TARGETM__1)
+#	ssdump -m $(TARGETM__2)
+#	touch $@
+#
+#CTABLE.T: ssdump.exe $(TARGETC_)
+#	ssdump -c $(TARGETC__1)
+#	ssdump -c $(TARGETC__2)
+#	touch $@
+
+
+SSDUMP.T: ssdump.exe $(TARGETTEXT)
+	SSDUMP $(TARGETS__1)
+	SSDUMP $(TARGETS__2)
+	SSDUMP $(TARGETPR_1)
+	SSDUMP $(TARGETPR_2)
+	SSDUMP $(TARGETMENU_1)
+	SSDUMP $(TARGETMENU_2)
+	SSDUMP $(TARGETBOOT)
+	SSDUMP $(TARGETT20) $(TARGETT23) $(TARGETT31)
+	touch $@
+
+trall1: ssmerge.com ssdump.exe $(TARGETTR_1)
+	ssmerge -t -d$@ $(TARGETTR_1)
+	ssdump -dtext -z $@
+	hd2 $@ > $*.dmp
+
+trall2: ssmerge.com ssdump.exe $(TARGETTR_2)
+	ssmerge -t -d$@ $(TARGETTR_2)
+	ssdump -dtext -z $@
+	hd2 $@ > $*.dmp
+
+zaall: ssmerge.com ssdump.exe $(TARGETITEM)
+	ssmerge -z -d$@ $(TARGETITEM)
+	ssdump -dtext -z $@
+	hd2 $@ > $*.dmp
+
+ndall1: ssmerge.com ssdump.exe $(TARGETND_1)
+	ssmerge -n -d$@ $(TARGETND_1)
+	ssdump -dtext -n $@
+	hd2 $@ > $*.dmp
+
+ndall2: ssmerge.com ssdump.exe $(TARGETND_2)
+	ssmerge -n -d$@ $(TARGETND_2)
+	ssdump -dtext -n $@
+	hd2 $@ > $*.dmp
+
+saall: ssmerge.com ssdump.exe $(TARGETUS)
+	ssmerge -n -d$@ $(TARGETUS)
+	ssdump -dtext -n $@
+	hd2 $@ > $*.dmp
+
+maall:
+	hd2 $(TARGETMA) > maall.dmp
+
+####
+viwc_: $(TARGETC_)
+	ssview -c 10\c_0?3.dat 10\c_25?.dat -c 10\c_600.dat 10\c_999.dat -c 11\c_00?.dat 11\c_01?.dat -c 11\c_02?.dat 11\c_03?.dat
+	ssview -c 11\c_04?.dat 12\c_10?.dat -c 12\c_11?.dat 12\c_12?.dat -c 12\c_13?.dat 12\c_14?.dat -c 13\c_20?.dat 13\c_21?.dat
+	ssview -c 13\c_22?.dat 13\c_23?.dat -c 13\c_24?.dat 21\c_00?.dat -c 21\c_01?.dat 21\c_02?.dat -c 21\c_03?.dat 21\c_04?.dat
+	ssview -c 22\c_10?.dat 22\c_11?.dat -c 22\c_12?.dat 22\c_13?.dat -c 22\c_14?.dat
+	ssview -c 23\c_20?.dat 23\c_21?.dat -c 23\c_22?.dat 23\c_23?.dat -c 23\c_24?.dat
+	ssview -c 31\c_00?.dat 31\c_02?.dat -c 31\c_03?.dat 31\c_04?.dat -c 31\c_10?.dat
+	ssview -c 32\c_08?.dat 32\c_01?.dat -c 32\c_02?.dat 32\c_03?.dat -c 32\c_04?.dat
+	ssview -c 41\c_01?.dat 41\c_02?.dat -c 42\c_02?.dat 42\c_03?.dat -c 43\c_06?.dat 45\c_08?.dat -c 44\c_05?.dat 44\c_07?.dat
+	ssview -c 43\c_09?.dat -c 45\c_10?.dat
+	ssview -c 45\c_000.dat 45\c_043.dat 45\c_143.dat 45\c_313.dat 45\c_403.dat 45\c_423.dat
+
+viwnc: $(TARGETNC)
+	ssview -n $(TARGETNC_1)
+	ssview -n $(TARGETNC_2)
+
+
+
+
+viwmap: $(TARGETMAP)
+	viwm_ -c10\c_250.dat 10\m_250.dat -c10\c_251.dat 10\m_250.dat -c11\c_000.dat 11\m_00?.dat -c11\c_010.dat 11\m_01?.dat
+	viwm_ -c11\c_020.dat 11\m_02?.dat -c11\c_030.dat 11\m_03?.dat -c11\c_040.dat 11\m_04?.dat 11\m_25?.dat
+	viwm_ -c12\c_100.dat 12\m_10?.dat -c12\c_110.dat 12\m_11?.dat -c12\c_120.dat 12\m_12?.dat -c12\c_130.dat 12\m_13?.dat
+	viwm_ -c12\c_140.dat 12\m_14?.dat -c13\c_200.dat 13\m_20?.dat -c13\c_210.dat 13\m_21?.dat -c13\c_220.dat 13\m_22?.dat
+	viwm_ -c13\c_230.dat 13\m_23?.dat -c13\c_240.dat 13\m_24?.dat -c21\c_000.dat 21\m_00?.dat -c21\c_010.dat 21\m_01?.dat
+	viwm_ -c21\c_020.dat 21\m_02?.dat -c21\c_030.dat 21\m_03?.dat -c21\c_040.dat 21\m_04?.dat 21\m_050.dat
+	viwm_ -c22\c_100.dat 22\m_10?.dat -c22\c_110.dat 22\m_11?.dat -c22\c_120.dat 22\m_12?.dat -c22\c_130.dat 22\m_13?.dat
+	viwm_ -c22\c_140.dat 22\m_14?.dat -c23\c_200.dat 23\m_20?.dat -c23\c_210.dat 23\m_21?.dat -c23\c_220.dat 23\m_22?.dat
+	viwm_ -c23\c_230.dat 23\m_23?.dat 23\m_250.dat -c23\c_240.dat 23\m_24?.dat 23\m_251.dat 23\m_252.dat
+	viwm_ -c31\c_000.dat 31\m_00?.dat -c31\c_020.dat 31\m_02?.dat -c31\c_030.dat 31\m_03?.dat -c31\c_040.dat 31\m_04?.dat
+	viwm_ -c31\c_100.dat 31\m_10?.dat -c32\c_010.dat 32\m_01?.dat -c32\c_020.dat 32\m_02?.dat -c32\c_030.dat 32\m_03?.dat
+	viwm_ -c32\c_040.dat 32\m_04?.dat -c32\c_080.dat 32\m_08?.dat -c41\c_010.dat 41\m_01?.dat -c41\c_020.dat 41\m_02?.dat
+	viwm_ -c42\c_020.dat 42\m_02?.dat -c42\c_030.dat 42\m_03?.dat -c43\c_060.dat 43\m_06?.dat -c43\c_090.dat 43\m_09?.dat
+	viwm_ -c44\c_050.dat 44\m_05?.dat -c44\c_070.dat 44\m_07?.dat -c45\c_080.dat 45\m_08?.dat
+	viwm_ -c45\c_100.dat 45\m_10?.dat 45\m_11?.dat
+	viwm_ -c45\c_000.dat 45\m_002.dat
+
+
+
+viwmp: $(TARGETMAP)
+	viwmp -c10\c_250.dat 10\m_250.dat -c10\c_251.dat 10\m_250.dat -c11\c_000.dat 11\m_00?.dat -c11\c_010.dat 11\m_01?.dat
+	viwmp -c11\c_020.dat 11\m_02?.dat -c11\c_030.dat 11\m_03?.dat -c11\c_040.dat 11\m_04?.dat 11\m_25?.dat
+	viwmp -c12\c_100.dat 12\m_10?.dat -c12\c_110.dat 12\m_11?.dat -c12\c_120.dat 12\m_12?.dat -c12\c_130.dat 12\m_13?.dat
+	viwmp -c12\c_140.dat 12\m_14?.dat -c13\c_200.dat 13\m_20?.dat -c13\c_210.dat 13\m_21?.dat -c13\c_220.dat 13\m_22?.dat
+	viwmp -c13\c_230.dat 13\m_23?.dat -c13\c_240.dat 13\m_24?.dat -c21\c_000.dat 21\m_00?.dat -c21\c_010.dat 21\m_01?.dat
+	viwmp -c21\c_020.dat 21\m_02?.dat -c21\c_030.dat 21\m_03?.dat -c21\c_040.dat 21\m_04?.dat 21\m_050.dat
+	viwmp -c22\c_100.dat 22\m_10?.dat -c22\c_110.dat 22\m_11?.dat -c22\c_120.dat 22\m_12?.dat -c22\c_130.dat 22\m_13?.dat
+	viwmp -c22\c_140.dat 22\m_14?.dat -c23\c_200.dat 23\m_20?.dat -c23\c_210.dat 23\m_21?.dat -c23\c_220.dat 23\m_22?.dat
+	viwmp -c23\c_230.dat 23\m_23?.dat 23\m_250.dat -c23\c_240.dat 23\m_24?.dat 23\m_251.dat 23\m_252.dat
+	viwmp -c31\c_000.dat 31\m_00?.dat -c31\c_020.dat 31\m_02?.dat -c31\c_030.dat 31\m_03?.dat -c31\c_040.dat 31\m_04?.dat
+	viwmp -c31\c_100.dat 31\m_10?.dat -c32\c_010.dat 32\m_01?.dat -c32\c_020.dat 32\m_02?.dat -c32\c_030.dat 32\m_03?.dat
+	viwmp -c32\c_040.dat 32\m_04?.dat -c32\c_080.dat 32\m_08?.dat -c41\c_010.dat 41\m_01?.dat -c41\c_020.dat 41\m_02?.dat
+	viwmp -c42\c_020.dat 42\m_02?.dat -c42\c_030.dat 42\m_03?.dat -c43\c_060.dat 43\m_06?.dat -c43\c_090.dat 43\m_09?.dat
+	viwmp -c44\c_050.dat 44\m_05?.dat -c44\c_070.dat 44\m_07?.dat -c45\c_080.dat 45\m_08?.dat
+	viwmp -c45\c_100.dat 45\m_10?.dat 45\m_11?.dat
+	viwmp -c45\c_000.dat 45\m_002.dat
+
+viwp_:
+	viwp_ 10\c_250.dat 10\c_003.dat 10\p_003.dat
+	viwp_ 10\c_250.dat 10\c_013.dat 10\p_013.dat
+	viwp_ 10\c_250.dat 10\c_023.dat 10\p_023.dat
+	viwp_ 10\c_250.dat 10\c_033.dat 10\p_033.dat
+	viwp_ 11\c_000.dat 11\c_001.dat 11\p_001.dat
+	viwp_ 11\c_000.dat 11\c_003.dat 11\p_003.dat
+	viwp_ 11\c_010.dat 11\c_011.dat 11\p_011.dat
+	viwp_ 11\c_010.dat 11\c_013.dat 11\p_013.dat
+	viwp_ 11\c_020.dat 11\c_021.dat 11\p_021.dat
+	viwp_ 11\c_020.dat 11\c_023.dat 11\p_023.dat
+	viwp_ 11\c_030.dat 11\c_031.dat 11\p_031.dat
+	viwp_ 11\c_030.dat 11\c_033.dat 11\p_033.dat
+	viwp_ 11\c_040.dat 11\c_041.dat 11\p_041.dat
+	viwp_ 11\c_040.dat 11\c_043.dat 11\p_043.dat
+	viwp_ 12\c_100.dat 12\c_101.dat 12\p_101.dat
+	viwp_ 12\c_100.dat 12\c_103.dat 12\p_103.dat
+	viwp_ 12\c_110.dat 12\c_111.dat 12\p_111.dat
+	viwp_ 12\c_110.dat 12\c_113.dat 12\p_113.dat
+	viwp_ 12\c_120.dat 12\c_121.dat 12\p_121.dat
+	viwp_ 12\c_120.dat 12\c_123.dat 12\p_123.dat
+	viwp_ 12\c_130.dat 12\c_131.dat 12\p_131.dat
+	viwp_ 12\c_130.dat 12\c_133.dat 12\p_133.dat
+	viwp_ 12\c_140.dat 12\c_141.dat 12\p_141.dat
+	viwp_ 12\c_140.dat 12\c_143.dat 12\p_143.dat
+	viwp_ 13\c_200.dat 13\c_201.dat 13\p_201.dat
+	viwp_ 13\c_200.dat 13\c_203.dat 13\p_203.dat
+	viwp_ 13\c_210.dat 13\c_211.dat 13\p_211.dat
+	viwp_ 13\c_210.dat 13\c_213.dat 13\p_213.dat
+	viwp_ 13\c_220.dat 13\c_221.dat 13\p_221.dat
+	viwp_ 13\c_220.dat 13\c_223.dat 13\p_223.dat
+	viwp_ 13\c_230.dat 13\c_231.dat 13\p_231.dat
+	viwp_ 13\c_230.dat 13\c_233.dat 13\p_233.dat
+	viwp_ 13\c_240.dat 13\c_241.dat 13\p_241.dat
+	viwp_ 13\c_240.dat 13\c_243.dat 13\p_243.dat
+	viwp_ 21\c_000.dat 21\c_001.dat 21\p_001.dat
+	viwp_ 21\c_000.dat 21\c_003.dat 21\p_003.dat
+	viwp_ 21\c_010.dat 21\c_011.dat 21\p_011.dat
+	viwp_ 21\c_010.dat 21\c_013.dat 21\p_013.dat
+	viwp_ 21\c_020.dat 21\c_021.dat 21\p_021.dat
+	viwp_ 21\c_020.dat 21\c_023.dat 21\p_023.dat
+	viwp_ 21\c_030.dat 21\c_031.dat 21\p_031.dat
+	viwp_ 21\c_030.dat 21\c_033.dat 21\p_033.dat
+	viwp_ 21\c_040.dat 21\c_041.dat 21\p_041.dat
+	viwp_ 21\c_040.dat 21\c_043.dat 21\p_043.dat
+	viwp_ 22\c_100.dat 22\c_101.dat 22\p_101.dat
+	viwp_ 22\c_100.dat 22\c_103.dat 22\p_103.dat
+	viwp_ 22\c_110.dat 22\c_111.dat 22\p_111.dat
+	viwp_ 22\c_110.dat 22\c_113.dat 22\p_113.dat
+	viwp_ 22\c_120.dat 22\c_121.dat 22\p_121.dat
+	viwp_ 22\c_120.dat 22\c_123.dat 22\p_123.dat
+	viwp_ 22\c_130.dat 22\c_131.dat 22\p_131.dat
+	viwp_ 22\c_130.dat 22\c_133.dat 22\p_133.dat
+	viwp_ 22\c_140.dat 22\c_141.dat 22\p_141.dat
+	viwp_ 22\c_140.dat 22\c_143.dat 22\p_143.dat
+	viwp_ 23\c_200.dat 23\c_201.dat 23\p_201.dat
+	viwp_ 23\c_200.dat 23\c_203.dat 23\p_203.dat
+	viwp_ 23\c_210.dat 23\c_211.dat 23\p_211.dat
+	viwp_ 23\c_210.dat 23\c_213.dat 23\p_213.dat
+	viwp_ 23\c_220.dat 23\c_221.dat 23\p_221.dat
+	viwp_ 23\c_220.dat 23\c_223.dat 23\p_223.dat
+	viwp_ 23\c_230.dat 23\c_231.dat 23\p_231.dat
+	viwp_ 23\c_230.dat 23\c_233.dat 23\p_233.dat
+	viwp_ 23\c_240.dat 23\c_241.dat 23\p_241.dat
+	viwp_ 23\c_240.dat 23\c_243.dat 23\p_243.dat 23\c_244.dat
+	viwp_ 31\c_000.dat 31\c_001.dat 31\p_001.dat
+	viwp_ 31\c_000.dat 31\c_003.dat 31\p_003.dat
+	viwp_ 31\c_020.dat 31\c_021.dat 31\p_021.dat
+	viwp_ 31\c_020.dat 31\c_023.dat 31\p_023.dat
+	viwp_ 31\c_030.dat 31\c_031.dat 31\p_031.dat
+	viwp_ 31\c_030.dat 31\c_033.dat 31\p_033.dat
+	viwp_ 31\c_040.dat 31\c_041.dat 31\p_041.dat
+	viwp_ 31\c_040.dat 31\c_043.dat 31\p_043.dat
+	viwp_ 31\c_100.dat 31\c_101.dat 31\p_101.dat
+	viwp_ 31\c_100.dat 31\c_103.dat 31\p_103.dat
+	viwp_ 32\c_010.dat 32\c_011.dat 32\p_011.dat
+	viwp_ 32\c_010.dat 32\c_013.dat 32\p_013.dat
+	viwp_ 32\c_020.dat 32\c_021.dat 32\p_021.dat
+	viwp_ 32\c_020.dat 32\c_023.dat 32\p_023.dat
+	viwp_ 32\c_030.dat 32\c_031.dat 32\p_031.dat
+	viwp_ 32\c_030.dat 32\c_033.dat 32\p_033.dat
+	viwp_ 32\c_040.dat 32\c_041.dat 32\p_041.dat
+	viwp_ 32\c_040.dat 32\c_043.dat 32\p_043.dat
+	viwp_ 32\c_080.dat 32\c_081.dat 32\p_081.dat
+	viwp_ 32\c_080.dat 32\c_083.dat 32\p_083.dat
+	viwp_ 41\c_010.dat 41\c_011.dat 41\p_011.dat
+	viwp_ 41\c_010.dat 41\c_013.dat 41\p_013.dat
+	viwp_ 41\c_020.dat 41\c_021.dat 41\p_021.dat
+	viwp_ 41\c_020.dat 41\c_023.dat 41\p_023.dat
+	viwp_ 42\c_020.dat 42\c_021.dat 42\p_021.dat
+	viwp_ 42\c_020.dat 42\c_023.dat 42\p_023.dat
+	viwp_ 42\c_030.dat 42\c_031.dat 42\p_031.dat
+	viwp_ 42\c_030.dat 42\c_033.dat 42\p_033.dat
+	viwp_ 43\c_060.dat 43\c_061.dat 43\p_061.dat
+	viwp_ 43\c_060.dat 43\c_063.dat 43\p_063.dat
+	viwp_ 43\c_090.dat 43\c_091.dat 43\p_091.dat
+	viwp_ 43\c_090.dat 43\c_093.dat 43\p_093.dat
+	viwp_ 43\c_090.dat 43\c_095.dat 43\p_095.dat
+	viwp_ 43\c_090.dat 43\c_097.dat 43\p_097.dat
+	viwp_ 43\c_090.dat 43\c_099.dat 43\p_099.dat
+	viwp_ 43\c_090.dat 43\c_09B.dat 43\p_09B.dat
+	viwp_ 43\c_090.dat 43\c_09D.dat 43\p_09D.dat
+	viwp_ 44\c_050.dat 44\c_051.dat 44\p_051.dat
+	viwp_ 44\c_050.dat 44\c_053.dat 44\p_053.dat
+	viwp_ 44\c_070.dat 44\c_071.dat 44\p_071.dat
+	viwp_ 44\c_070.dat 44\c_073.dat 44\p_073.dat
+	viwp_ 45\c_080.dat 45\c_081.dat 45\p_081.dat
+	viwp_ 45\c_080.dat 45\c_083.dat 45\p_083.dat
+	viwp_ 45\c_100.dat 45\c_101.dat 45\p_101.dat
+	viwp_ 45\c_100.dat 45\c_103.dat 45\p_103.dat
+	viwp_ 45\c_100.dat 45\c_105.dat 45\p_105.dat
+	viwp_ 45\c_100.dat 45\c_107.dat 45\p_107.dat
+	viwp_ 45\c_100.dat 45\c_109.dat 45\p_109.dat
+	viwp_ 45\c_100.dat 45\c_10B.dat 45\p_10B.dat
+	viwp_ 45\c_100.dat 45\c_10D.dat 45\p_10D.dat
+	viwp_ 45\c_100.dat 45\c_10F.dat 45\p_10F.dat
+	viwp_ 45\c_100.dat 45\c_10H.dat 45\p_10H.dat
+	viwp_ 45\c_000.dat 45\c_043.dat 45\p_043.dat
+	viwp_ 45\c_000.dat 45\c_143.dat 45\p_143.dat
+	viwp_ 45\c_000.dat 45\c_313.dat 45\p_313.dat
+	viwp_ 45\c_000.dat 45\c_403.dat 45\p_403.dat
+	viwp_ 45\c_000.dat 45\c_423.dat 45\p_423.dat
+	
+
+
+ssmerge.obj: ssstruct.h
+mrgtr.obj: ssstruct.h datatbl.i
+ssdump.obj: datatbl.i ssstruct.h
