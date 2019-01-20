@@ -1,6 +1,7 @@
 /* sorcerian character view program */
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
 
 #define PBSIZE	0x8
 #define CMAX	0x100
@@ -68,7 +69,7 @@ int _cdecl main(int argc,char **argv)
 		memset(&cbuf[x0][3],0xFF,sizeof(unsigned short)*ROW);
 	while(--argc) {
 		if (NULL==(fp=fopen(*++argv,"rb")))
-			fprintf(stdout, "file open error!! %s", argv);
+			fprintf(stdout, "file open error!! %s", *argv);
 		if (fread(&pbuf,1,0x200,fp)!=0x200) {
 			fputs("pattern file read error!!\n", stderr);
 			exit(2);
@@ -222,7 +223,7 @@ c6:
 
 void viewx(unsigned int imagex,int p,int xpos,int ypos)
 {
-	int index, i, y, px, py, qx, qy;
+	int index, i, y, px, py;
 	unsigned short aimage;
 
 	px=p%CPAT;

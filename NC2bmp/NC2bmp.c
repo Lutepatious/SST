@@ -56,7 +56,6 @@ struct header {
 void view(void);
 
 void _cdecl main(int argc, char **argv) {
-	int i, j;
 	int x1, x2;
 	FILE *fi, *fo;
 	static char fpath[_MAX_PATH], opath[_MAX_PATH];

@@ -3,6 +3,7 @@
 #include <conio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <memory.h>
 
 #define DLENGTH 0x0C
 #define BMAX	0x80
@@ -73,7 +74,7 @@ void main(int argc,char **argv)
 	FILE *fp;
 	static char fpath[_MAX_PATH], cfile[_MAX_PATH], ofile[_MAX_PATH];
 	static char drive[_MAX_DRIVE], dir[_MAX_DIR], fname[_MAX_FNAME], ext[_MAX_EXT];
-	int x,y;
+	int y;
 
 	signal(SIGINT, ctrlc);
 	if (argc < 2) {
@@ -134,7 +135,7 @@ void main(int argc,char **argv)
 void viewmap(void)
 {
 	unsigned short aimage;
-	unsigned int x, x0, x1, x2, x3, y1, y, image, i, index;
+	unsigned int x, x1, x2, y, image, i, index;
 
 	memset(bm,0,sizeof(bm));
 

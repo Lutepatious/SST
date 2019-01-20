@@ -3,6 +3,8 @@
 #include <conio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <string.h>
+#include <memory.h>
 
 #define DLENGTH 0x0C
 #define BMAX	0x80
@@ -77,7 +79,7 @@ void main(int argc,char **argv)
 	static char fpath[_MAX_PATH], cfile[_MAX_PATH], ofile[_MAX_PATH];
 	static char drive[_MAX_DRIVE], dir[_MAX_DIR], fname[_MAX_FNAME], ext[_MAX_EXT];
 	static char fname1[_MAX_FNAME]={0};
-	int x,y,a;
+	int y, a;
 
 	signal(SIGINT, ctrlc);
 	if (argc < 2) {
