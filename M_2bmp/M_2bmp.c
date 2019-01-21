@@ -58,10 +58,7 @@ struct header {
              {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}};
 #pragma pack()
 
-#ifdef _WIN32
-#define __huge
-#endif
-unsigned long __huge bm[192][256][2];
+unsigned __int64 bm[192][256];
 
 void main(int argc, char **argv);
 void __cdecl ctrlc(int a);
@@ -144,13 +141,7 @@ void viewmap(int a)
 	unsigned short aimage;
 	unsigned int x, x1, x2, y, image, i, index, pattern;
 
-#ifdef _WIN32
 	memset(bm,0,sizeof(bm));
-#else
-	for (y=0;y<192;y++)
-		for (x=0;x<256;x++)
-			bm[y][x][1]=bm[y][x][0]=0L;
-#endif
 
 	for (x=0;x< FULLBUFCOL;x++) { /* rows 4096 pixel */
 		x1=X1(x);
@@ -175,7 +166,7 @@ void viewmap(int a)
 					 * abrgabrgabrgabrgabrgabrgabrgabrg
 					 */
 					if (aimage & (1 << (15-(index^0x8))))
-						bm[y][x][index>>3] |= 1L << (((index&7^1)<<2)+i);
+						bm[y][x] |= 1LL << (((index^1)<<2)+i);
 				}
 			}
 		}
