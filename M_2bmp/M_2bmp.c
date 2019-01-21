@@ -155,6 +155,7 @@ void viewmap(int a)
 			for(i=0;i<PLANE-1;i++) {
 				/* aimage <- cbuf[image][plane][Y3(y)] */
 				aimage=cbuf[image][i][Y3(y)];
+				unsigned __int64 t = 0;
 				for (index=0;index<16;index++) {
 					/* byte swap */
 					/* PC-98 plane bitmap
@@ -164,7 +165,8 @@ void viewmap(int a)
 					 * abrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrg
 					 */
 					if (aimage & (1 << index)) {
-						bm[y][x] |= 1LL << ((((~index) & 0xF ^ 9) << 2) + i);
+						t |= 1LL << (index * 4);
+						bm[y][x] |= ((unsigned __int64)_byteswap_ulong(t & 0xFFFFFFFF) | ((unsigned __int64) _byteswap_ulong((t >> 32) & 0xFFFFFFFF) << 32)) << i;
 					}
 				}
 			}
