@@ -52,8 +52,8 @@ struct header {
 	struct rgbq RGB5;
 	struct rgbq RGB6;
 	struct rgbq RGB7;
-} bHeader = {0x4D42,0xC0056,0,0,0x56,
-             0x28,0x1000,0x180,0x1,0x4,0,0xC0000,0,0,8,8,
+} bHeader = {0x4D42,0x60056,0,0,0x56,
+             0x28,0x1000,0xC0,0x1,0x4,0,0xC0000,10000,5000,8,8,
              {0,0,0,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
              {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}};
 #pragma pack()
@@ -120,7 +120,6 @@ void main(int argc,char **argv)
 			viewmap(a);
 			for(y=0;y<192;y++) {
 				fwrite(&bm[191-y],1,0x800,fp);
-				fwrite(&bm[191-y],1,0x800,fp);
 			}
 			fclose(fp);
 		}
@@ -159,14 +158,14 @@ void viewmap(int a)
 				for (index=0;index<16;index++) {
 					/* byte swap */
 					/* PC-98 plane bitmap
-					 * 0000000011111111
-					 * 7654321076543210
+					 * 76543210fedcba98
 					 * BMP file 4bit packedpixel bitmap
-					 * 11110000333322225555444477776666
-					 * abrgabrgabrgabrgabrgabrgabrgabrg
+					 * 1111000033332222555544447777666699998888bbbbaaaaddddccccffffeeee
+					 * abrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrg
 					 */
-					if (aimage & (1 << (15-(index^0x8))))
-						bm[y][x] |= 1LL << (((index^1)<<2)+i);
+					if (aimage & (1 << index)) {
+						bm[y][x] |= 1LL << ((((~index) & 0xF ^ 9) << 2) + i);
+					}
 				}
 			}
 		}
