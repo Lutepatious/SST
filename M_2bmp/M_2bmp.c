@@ -114,7 +114,7 @@ void main(int argc,char **argv)
 		fclose(fp);
 		for (a=0;a<5;a++) {
 			fname1[5]='0'+a;
-			_makepath(ofile, drive, dir, fname1, ".BMP");
+			_makepath(ofile, drive, dir, fname1, ".bmp");
 			if (NULL==(fp=fopen(ofile,"wb"))) {
 				printf("file open error!! %s\n", ofile);
 				exit(-1);
