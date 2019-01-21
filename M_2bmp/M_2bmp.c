@@ -165,7 +165,7 @@ void viewmap(int a)
 					 * abrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrgabrg
 					 */
 					if (aimage & (1 << index)) {
-						t |= 1LL << (index * 4);
+						t |= 1LL << (index * PLANE);
 						bm[y][x] |= ((unsigned __int64)_byteswap_ulong(t & 0xFFFFFFFF) | ((unsigned __int64) _byteswap_ulong((t >> 32) & 0xFFFFFFFF) << 32)) << i;
 					}
 				}
