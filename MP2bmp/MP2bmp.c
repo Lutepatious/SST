@@ -57,7 +57,7 @@ struct header {
              {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}};
 #pragma pack()
 
-unsigned long bm[160][16][2];
+unsigned __int64 bm[160][16];
 
 void main(int argc, char **argv);
 void __cdecl ctrlc(int a);
@@ -146,9 +146,17 @@ void viewmap(void)
 			image=ctbuf[x1+Y1(y)*0x8][x2][Y2(y)]&0x7F;
 			for(i=0;i<PLANE-1;i++) {
 				aimage=cbuf[image][i][Y3(y)];
+				union _t {
+					unsigned __int64 a8;
+					unsigned __int32 a4[2];
+				} u;
+				u.a8 = 0;
+
 				for (index=0;index<16;index++) {
-					if (aimage & (1 << (15-(index^0x8))))
-						bm[y][x][index>>3] |= 1L << (((index&7^1)<<2)+i);
+					if (aimage & (1 << index)) {
+						u.a8 |= 1LL << (index * PLANE);
+						bm[y][x] |= ((unsigned __int64)_byteswap_ulong(u.a4[0]) | ((unsigned __int64)_byteswap_ulong(u.a4[1]) << 32)) << i;
+					}
 				}
 			}
 		}
