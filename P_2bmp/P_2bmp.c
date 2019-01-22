@@ -1,7 +1,11 @@
 /* sorcerian character view program */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <memory.h>
+#include <sys/types.h>
+
+#include "png.h"
 
 #define PBSIZE	0x8
 #define CMAX	0x100
@@ -14,42 +18,12 @@
 #define CPAT2	0x10
 #define PMAX	CPAT*CPAT2
 
-#pragma pack(1)
-struct rgbq {
-	unsigned char rgbBlue;
-	unsigned char rgbGreen;
-	unsigned char rgbRed;
-	unsigned char rgbReserved;
-};
-struct header {
-	unsigned short bfType;
-	unsigned long bfSize;
-	unsigned short bfReserved1;
-	unsigned short bfReserved2;
-	unsigned long OffBits;
-	unsigned long biSize;
-	unsigned long biWidth;
-	unsigned long biHeight;
-	unsigned short biPlanes;
-	unsigned short biBitCount;
-	unsigned long biCompression;
-	unsigned long biSizeImage;
-	unsigned long biXPelsPerMeter;
-	unsigned long biYPelsPerMeter;
-	unsigned long biClrUsed;
-	unsigned long biClrImportant;
-	struct rgbq RGB[0x10];
-} bHeader = {0x4D42,0x12076,0,0,0x76,
-             0x28,0xC0,0x300,0x1,0x4,0,0x12000,0,0,16,16,
-             {{0,0,0,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
-             {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0},
-             {0x80,0x80,0x80,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
-             {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}}};
-#pragma pack()
+#define PNG_HEIGHT (CPAT2*HEIGHT*ROW*2)
+#define PNG_WIDTH (CPAT*COLUMN*16)
 
 unsigned short cbuf[CMAX][PLANE][ROW];	/* 16384 byte */
 unsigned char pbuf[PMAX][PBSIZE];	/* 512 byte */
-unsigned long vbuf[CPAT2][HEIGHT][ROW][CPAT][COLUMN][2];
+unsigned __int64 vbuf[CPAT2][HEIGHT][ROW][CPAT][COLUMN];
 
 int _cdecl  main(int argc, char **argv);
 void imout(void);
@@ -77,7 +51,7 @@ int _cdecl main(int argc,char **argv)
 		fclose(fp);
 		_fullpath(fpath, *argv, _MAX_PATH);
 		_splitpath(fpath, drive, dir, fname, ext);
-		_makepath(ofile, drive, dir, fname, ".BMP");
+		_makepath(ofile, drive, dir, fname, ".png");
 		fname[0] = 'C';
 		_makepath(cfile1, drive, dir, fname, ext);
 		fname[4]++;
@@ -107,16 +81,48 @@ int _cdecl main(int argc,char **argv)
 			}
 			fclose(fp);
 		}
+		imout();
+
+		unsigned char   **image;
+
+		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
+		for (size_t j = 0; j < PNG_HEIGHT; j++)
+			image[j] = (png_bytep)& vbuf[j / (2 * ROW*HEIGHT)][(j / (2 * ROW)) % HEIGHT][(j / 2) % ROW];
+
 		if (NULL==(fp=fopen(ofile,"wb")))
 			fprintf(stdout, "file open error!! %s", ofile);
-		imout();
-		fwrite(&bHeader,1,sizeof(bHeader),fp);
-		for (x0=CPAT2-1;x0>=0;x0--)
-		for (x1=HEIGHT-1;x1>=0;x1--)
-		for (x2=ROW-1;x2>=0;x2--) {
-			fwrite(&vbuf[x0][x1][x2],1, 0x60,fp);
-			fwrite(&vbuf[x0][x1][x2],1, 0x60,fp);
+
+		png_structp png_ptr;
+		png_infop info_ptr;
+		png_color pal[16] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF},
+							  {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0} };
+
+		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+		if (png_ptr == NULL) {
+			fclose(fp);
+			return;
 		}
+		info_ptr = png_create_info_struct(png_ptr);
+		if (info_ptr == NULL) {
+			png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+			fclose(fp);
+			return;
+		}
+		png_init_io(png_ptr, fp);
+		png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
+			4, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+		png_set_PLTE(png_ptr, info_ptr, pal, 16);
+		png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
+							   0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+		png_set_tRNS(png_ptr, info_ptr, trans, 16, NULL);
+
+		png_write_info(png_ptr, info_ptr);
+		png_write_image(png_ptr, image);
+		png_write_end(png_ptr, info_ptr);
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+
+		free(image);
 		fclose(fp);
 	}
 	exit(0);
@@ -230,13 +236,20 @@ void viewx(unsigned int imagex,int p,int xpos,int ypos)
 	py=p/CPAT;
 
 	for (y=0;y<ROW;y++) {
-		vbuf[py][ypos][y][px][xpos][1] = vbuf[py][ypos][y][px][xpos][0] = 0L;
+		vbuf[py][ypos][y][px][xpos] = 0L;
 		for (i=0;i<PLANE;i++)
 		{
 			aimage = cbuf[imagex][i][y];
+			union _t {
+				unsigned __int64 a8;
+				unsigned __int32 a4[2];
+			} u;
+			u.a8 = 0;
 			for (index=0;index<16;index++) {
-				if (aimage & (1 << (15-(index^0x8))))
-					vbuf[py][ypos][y][px][xpos][index>>3] |= 1L << (((index&7^1)<<2)+i);
+				if (aimage & (1 << index)) {
+					u.a8 |= 1LL << (index * PLANE);
+					vbuf[py][ypos][y][px][xpos] |= ((unsigned __int64)_byteswap_ulong(u.a4[0]) | ((unsigned __int64)_byteswap_ulong(u.a4[1]) << 32)) << i;
+				}
 			}
 		}
 	}

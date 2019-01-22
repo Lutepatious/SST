@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <memory.h>
 
+#include "png.h"
+
 #define ROW 8
 #define COLUMN 0x10
 #define PLANE 4
@@ -9,7 +11,7 @@
 #define BSIZE (ROW*COLUMN*sizeof(unsigned long)*2)
 
 unsigned short cbuf[COLUMN*BANK][PLANE][ROW];
-unsigned long buf[ROW*BANK][COLUMN][2];
+unsigned __int64 buf[ROW*BANK][COLUMN];
 
 #pragma pack(1)
 struct rgbq {
@@ -101,17 +103,24 @@ void viewmap(void)
 	for (x=0;x<COLUMN;x++)
 	for (i=0;i<PLANE;i++) {
 		aimage = cbuf[x+j*COLUMN][i][y];
+		union _t {
+			unsigned __int64 a8;
+			unsigned __int32 a4[2];
+		} u;
+		u.a8 = 0;
+		/* byte swap */
+		/* PC-98 plane bitmap
+		 * 0000000011111111
+		 * 7654321076543210
+		 * BMP file 4bit packedpixel bitmap
+		 * 11110000333322225555444477776666
+		 * abrgabrgabrgabrgabrgabrgabrgabrg
+		 */
 		for (index=0;index<16;index++) {
-			/* byte swap */
-			/* PC-98 plane bitmap
-			 * 0000000011111111
-			 * 7654321076543210
-			 * BMP file 4bit packedpixel bitmap
-			 * 11110000333322225555444477776666
-			 * abrgabrgabrgabrgabrgabrgabrgabrg
-			 */
-			if (aimage & (1 << (15-(index^0x8))))
-				buf[y+j*ROW][x][index>>3] |= 1L << (((index&7^1)<<2)+i);
+			if (aimage & (1 << index)) {
+				u.a8 |= 1LL << (index * PLANE);
+				buf[y + j * ROW][x] |= ((unsigned __int64)_byteswap_ulong(u.a4[0]) | ((unsigned __int64)_byteswap_ulong(u.a4[1]) << 32)) << i;
+			}
 		}
 	}
 }
