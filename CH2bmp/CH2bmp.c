@@ -3,6 +3,8 @@
 #include <string.h>
 #include <memory.h>
 #include <ctype.h>
+
+
 #define MAXPAT 0x20
 #define ROW  0x8
 #define PLANE 4
@@ -13,7 +15,7 @@
 void _cdecl main(int argc, char **argv);
 
 unsigned short chbuf[MAXPAT][PLANE][ROW];
-unsigned long vbuf[HEIGHT][ROW][CPAT][COLUMN][2];
+unsigned __int64 vbuf[HEIGHT][ROW][CPAT][COLUMN];
 
 struct AGE {
 	unsigned char mdata[CPAT][HEIGHT*2];
@@ -25,10 +27,10 @@ struct MAP {
 } map[8];
 
 unsigned char *CHFILE[8][3] = {
- {"CH000.DAT","CH001.DAT","CH002.DAT"},{"CH010.DAT","CH011.DAT","CH012.DAT"},
- {"CH100.DAT","CH101.DAT","CH102.DAT"},{"CH110.DAT","CH111.DAT","CH112.DAT"},
- {"CH200.DAT","CH201.DAT","CH202.DAT"},{"CH210.DAT","CH211.DAT","CH212.DAT"},
- {"CH300.DAT","CH301.DAT","CH302.DAT"},{"CH310.DAT","CH311.DAT","CH312.DAT"}};
+ {"CH000","CH001","CH002"},{"CH010","CH011","CH012"},
+ {"CH100","CH101","CH102"},{"CH110","CH111","CH112"},
+ {"CH200","CH201","CH202"},{"CH210","CH211","CH212"},
+ {"CH300","CH301","CH302"},{"CH310","CH311","CH312"}};
 
 unsigned char *BMPFILE[8][3] = {
  {"CH000.BMP","CH001.BMP","CH002.BMP"},{"CH010.BMP","CH011.BMP","CH012.BMP"},
@@ -69,7 +71,7 @@ struct header {
              {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}}};
 #pragma pack()
 
-unsigned char *MAPFILE="PLPTR.DAT";
+unsigned char *MAPFILE="PLPTR";
 void view(int cnum,int cage);
 
 void _cdecl main(int argc, char **argv) {
@@ -115,8 +117,6 @@ void _cdecl main(int argc, char **argv) {
 	exit(0);
 }
 
-/* unsigned long vbuf[HEIGHT][ROW][CPAT][COLUMN][2]; */
-/* unsigned short chbuf[MAXPAT][PLANE][ROW]; */
 void viewx(unsigned int imagex,int p,int xpos,int ypos);
 void view(int cnum,int cage)
 {
@@ -148,13 +148,19 @@ void viewx(unsigned int imagex,int p,int xpos,int ypos)
 	unsigned short aimage;
 
 	for (y=0;y<ROW;y++) {
-		vbuf[ypos][y][p][xpos][1] = vbuf[ypos][y][p][xpos][0] = 0L;
-		for (i=0;i<PLANE;i++)
-		{
+		vbuf[ypos][y][p][xpos] = 0LL;
+		for (i=0;i<PLANE;i++) {
 			aimage = chbuf[imagex][i][y];
+			union _t {
+				unsigned __int64 a8;
+				unsigned __int32 a4[2];
+			} u;
+			u.a8 = 0;
 			for (index=0;index<16;index++) {
-				if (aimage & (1 << (15-(index^0x8))))
-					vbuf[ypos][y][p][xpos][index>>3] |= 1L << (((index&7^1)<<2)+i);
+				if (aimage & (1 << index)) {
+					u.a8 |= 1LL << (index * PLANE);
+					vbuf[ypos][y][p][xpos] |= ((unsigned __int64)_byteswap_ulong(u.a4[0]) | ((unsigned __int64)_byteswap_ulong(u.a4[1]) << 32)) << i;
+				}
 			}
 		}
 	}

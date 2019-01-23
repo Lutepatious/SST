@@ -3,6 +3,8 @@
 #include <string.h>
 #include <memory.h>
 #include <ctype.h>
+
+
 #define MAXPAT 0x20
 #define ROW  0x8
 #define PLANE 4
@@ -13,7 +15,7 @@
 void _cdecl main(int argc, char **argv);
 
 unsigned short chbuf[MAXPAT][PLANE][ROW];
-unsigned long vbuf[HEIGHT][ROW][CPAT][COLUMN][2];
+unsigned __int64 vbuf[HEIGHT][ROW][CPAT][COLUMN];
 
 struct MAP {
 	unsigned char mdata[4][CPAT][HEIGHT*2];
@@ -103,8 +105,6 @@ void _cdecl main(int argc, char **argv) {
 	exit(0);
 }
 
-/* unsigned long vbuf[HEIGHT][ROW][CPAT][COLUMN][2]; */
-/* unsigned short chbuf[MAXPAT][PLANE][ROW]; */
 void viewx(unsigned int imagex,int p,int xpos,int ypos);
 void view(void)
 {
@@ -136,13 +136,20 @@ void viewx(unsigned int imagex,int p,int xpos,int ypos)
 	unsigned short aimage;
 
 	for (y=0;y<ROW;y++) {
-		vbuf[ypos][y][p][xpos][1] = vbuf[ypos][y][p][xpos][0] = 0L;
+		vbuf[ypos][y][p][xpos] = 0LL;
 		for (i=0;i<PLANE;i++)
 		{
 			aimage = chbuf[imagex][i][y];
-			for (index=0;index<16;index++) {
-				if (aimage & (1 << (15-(index^0x8))))
-					vbuf[ypos][y][p][xpos][index>>3] |= 1L << (((index&7^1)<<2)+i);
+			union _t {
+				unsigned __int64 a8;
+				unsigned __int32 a4[2];
+			} u;
+			u.a8 = 0;
+			for (index = 0; index < 16; index++) {
+				if (aimage & (1 << index)) {
+					u.a8 |= 1LL << (index * PLANE);
+					vbuf[ypos][y][p][xpos] |= ((unsigned __int64)_byteswap_ulong(u.a4[0]) | ((unsigned __int64)_byteswap_ulong(u.a4[1]) << 32)) << i;
+				}
 			}
 		}
 	}

@@ -150,14 +150,7 @@ void main(int argc,char **argv)
 		png_write_image(png_ptr, image);
 		png_write_end(png_ptr, info_ptr);
 		png_destroy_write_struct(&png_ptr, &info_ptr);
-
-#if 0
-		fwrite(&bHeader, 1, sizeof(bHeader), fp);
-		for(y=0;y<160;y++) {
-			fwrite(&bm[159-y],1,0x80,fp);
-			fwrite(&bm[159-y],1,0x80,fp);
-		}
-#endif
+		free(image);
 		fclose(fp);
 	}
 	exit(0);

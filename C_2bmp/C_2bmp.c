@@ -117,20 +117,7 @@ void __cdecl main(int argc, char **argv)
 		png_write_image(png_ptr, image);
 		png_write_end(png_ptr, info_ptr);
 		png_destroy_write_struct(&png_ptr, &info_ptr);
-
-
-#if 0
-		fwrite(&bHeader, 1, sizeof(bHeader), fo);
-		for (i=rsize*ROW-1;i>=0;i--) {
-			fwrite(&buf[i],1,COLUMN*8,fo);
-			fwrite(&buf[i],1,COLUMN*8,fo);
-		}
-		bHeader.bfSize = rsize*2*BSIZE + 0x76;
-		bHeader.biSizeImage = rsize*2*BSIZE;
-		bHeader.biHeight = rsize*2*ROW;
-		fseek(fo,0,SEEK_SET);
-		fwrite(&bHeader,1,sizeof(bHeader),fo);
-#endif
+		free(image);
 		fclose(fo);
 	}
 }

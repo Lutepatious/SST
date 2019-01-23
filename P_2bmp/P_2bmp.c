@@ -25,7 +25,7 @@ unsigned short cbuf[CMAX][PLANE][ROW];	/* 16384 byte */
 unsigned char pbuf[PMAX][PBSIZE];	/* 512 byte */
 unsigned __int64 vbuf[CPAT2][HEIGHT][ROW][CPAT][COLUMN];
 
-int _cdecl  main(int argc, char **argv);
+int _cdecl main(int argc, char **argv);
 void imout(void);
 
 short cfset=0;
@@ -238,8 +238,7 @@ void viewx(unsigned int imagex,int p,int xpos,int ypos)
 
 	for (y=0;y<ROW;y++) {
 		vbuf[py][ypos][y][px][xpos] = 0L;
-		for (i=0;i<PLANE;i++)
-		{
+		for (i=0;i<PLANE;i++) {
 			aimage = cbuf[imagex][i][y];
 			union _t {
 				unsigned __int64 a8;
