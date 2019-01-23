@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <ctype.h>
 
+#include "png.h"
 
 #define MAXPAT 0x20
 #define ROW  0x8
@@ -11,6 +12,9 @@
 #define COLUMN 4
 #define HEIGHT 3
 #define CPAT 8
+
+#define PNG_HEIGHT (HEIGHT*ROW)
+#define PNG_WIDTH (CPAT*COLUMN*16)
 
 void _cdecl main(int argc, char **argv);
 
@@ -33,10 +37,10 @@ unsigned char *CHFILE[8][3] = {
  {"CH300","CH301","CH302"},{"CH310","CH311","CH312"}};
 
 unsigned char *BMPFILE[8][3] = {
- {"CH000.BMP","CH001.BMP","CH002.BMP"},{"CH010.BMP","CH011.BMP","CH012.BMP"},
- {"CH100.BMP","CH101.BMP","CH102.BMP"},{"CH110.BMP","CH111.BMP","CH112.BMP"},
- {"CH200.BMP","CH201.BMP","CH202.BMP"},{"CH210.BMP","CH211.BMP","CH212.BMP"},
- {"CH300.BMP","CH301.BMP","CH302.BMP"},{"CH310.BMP","CH311.BMP","CH312.BMP"}};
+ {"CH000.png","CH001.png","CH002.png"},{"CH010.png","CH011.png","CH012.png"},
+ {"CH100.png","CH101.png","CH102.png"},{"CH110.png","CH111.png","CH112.png"},
+ {"CH200.png","CH201.png","CH202.png"},{"CH210.png","CH211.png","CH212.png"},
+ {"CH300.png","CH301.png","CH302.png"},{"CH310.png","CH311.png","CH312.png"}};
 
 #pragma pack(1)
 struct rgbq {
@@ -105,13 +109,42 @@ void _cdecl main(int argc, char **argv) {
 			exit(1);
 		}
 		view(j,i);
+		unsigned char **image;
 
-		fwrite(&bHeader,1,sizeof(bHeader),fo);
-		for (x1=HEIGHT-1;x1>=0;x1--)
-		for (x2=ROW-1;x2>=0;x2--) {
-			fwrite(&vbuf[x1][x2],1, 0x100,fo);
-			fwrite(&vbuf[x1][x2],1, 0x100,fo);
+		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
+		for (size_t j = 0; j < PNG_HEIGHT; j++)
+			image[j] = (png_bytep)& vbuf[j / ROW][j % ROW];
+		png_structp png_ptr;
+		png_infop info_ptr;
+		png_color pal[16] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF},
+							  {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0} };
+
+		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+		if (png_ptr == NULL) {
+			fclose(fo);
+			return;
 		}
+		info_ptr = png_create_info_struct(png_ptr);
+		if (info_ptr == NULL) {
+			png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+			fclose(fo);
+			return;
+		}
+		png_init_io(png_ptr, fo);
+		png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
+			4, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+		png_set_PLTE(png_ptr, info_ptr, pal, 16);
+		png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
+		png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+							   0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+		png_set_tRNS(png_ptr, info_ptr, trans, 16, NULL);
+
+		png_write_info(png_ptr, info_ptr);
+		png_write_image(png_ptr, image);
+		png_write_end(png_ptr, info_ptr);
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+		free(image);
 		fclose(fo);
 	}
 	exit(0);
