@@ -83,14 +83,14 @@ int _cdecl main(int argc,char **argv)
 		}
 		imout();
 
+		if (NULL == (fp = fopen(ofile, "wb")))
+			fprintf(stdout, "file open error!! %s", ofile);
+
 		unsigned char   **image;
 
 		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
 		for (size_t j = 0; j < PNG_HEIGHT; j++)
 			image[j] = (png_bytep)& vbuf[j / (ROW*HEIGHT)][(j / ROW) % HEIGHT][j % ROW];
-
-		if (NULL==(fp=fopen(ofile,"wb")))
-			fprintf(stdout, "file open error!! %s", ofile);
 
 		png_structp png_ptr;
 		png_infop info_ptr;

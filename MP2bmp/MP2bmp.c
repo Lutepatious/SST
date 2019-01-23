@@ -17,8 +17,8 @@
 #define FULLBUFCOL (unsigned int)(BMAX*2)
 #define FULLBUFROW (unsigned int)(DLENGTH*ROW*2)
 
-#define PNG_HEIGHT (FULLBUFROW)
-#define PNG_WIDTH (FULLBUFCOL*16)
+#define PNG_HEIGHT (CTMAX*2)
+#define PNG_WIDTH (FULLBUFCOL)
 
 unsigned short cbuf[CMAX][PLANE][ROW];	/* 8192 byte */
 unsigned char mbuf[BMAX][DLENGTH];	/* 1536 byte */
@@ -100,7 +100,7 @@ void main(int argc,char **argv)
 		_fullpath(fpath, *argv, _MAX_PATH);
 		_splitpath(fpath, drive, dir, fname, ext);
 		fname[1] = 'P';
-		_makepath(ofile, drive, dir, fname, ".BMP");
+		_makepath(ofile, drive, dir, fname, ".png");
 		fname[0] = 'C';
 		fname[1] = '_';
 		fname[4] = '0';
@@ -118,12 +118,46 @@ void main(int argc,char **argv)
 			printf("file open error!! %s\n", ofile);
 			exit(-1);
 		}
-		fwrite(&bHeader,1,sizeof(bHeader),fp);
 		viewmap();
+		unsigned char   **image;
+
+		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
+		for (size_t j = 0; j < PNG_HEIGHT; j++)
+			image[j] = (png_bytep)&bm[j];
+
+		png_structp png_ptr;
+		png_infop info_ptr;
+		png_color pal[8] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF} };
+
+		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+		if (png_ptr == NULL) {
+			fclose(fp);
+			return;
+		}
+		info_ptr = png_create_info_struct(png_ptr);
+		if (info_ptr == NULL) {
+			png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+			fclose(fp);
+			return;
+		}
+		png_init_io(png_ptr, fp);
+		png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
+			4, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+		png_set_PLTE(png_ptr, info_ptr, pal, 8);
+		png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
+		png_write_info(png_ptr, info_ptr);
+		png_write_image(png_ptr, image);
+		png_write_end(png_ptr, info_ptr);
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+
+#if 0
+		fwrite(&bHeader, 1, sizeof(bHeader), fp);
 		for(y=0;y<160;y++) {
 			fwrite(&bm[159-y],1,0x80,fp);
 			fwrite(&bm[159-y],1,0x80,fp);
 		}
+#endif
 		fclose(fp);
 	}
 	exit(0);
