@@ -81,12 +81,12 @@ int _cdecl main(int argc,char **argv)
 			}
 			fclose(fp);
 		}
-		imout();
 
 		if (NULL == (fp = fopen(ofile, "wb")))
 			fprintf(stdout, "file open error!! %s", ofile);
 
-		unsigned char   **image;
+		imout();
+		unsigned char **image;
 
 		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
 		for (size_t j = 0; j < PNG_HEIGHT; j++)

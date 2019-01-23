@@ -119,7 +119,7 @@ void main(int argc,char **argv)
 			exit(-1);
 		}
 		viewmap();
-		unsigned char   **image;
+		unsigned char **image;
 
 		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
 		for (size_t j = 0; j < PNG_HEIGHT; j++)

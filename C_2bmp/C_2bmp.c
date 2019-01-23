@@ -10,6 +10,10 @@
 #define BANK 8
 #define BSIZE (ROW*COLUMN*sizeof(unsigned long)*2)
 
+#define PNG_HEIGHT (ROW*BANK)
+#define PNG_WIDTH (COLUMN*16)
+
+
 unsigned short cbuf[COLUMN*BANK][PLANE][ROW];
 unsigned __int64 buf[ROW*BANK][COLUMN];
 
@@ -65,7 +69,7 @@ void __cdecl main(int argc, char **argv)
 		}
 		_fullpath(fpath, *argv, _MAX_PATH);
 		_splitpath(fpath, drive, dir, fname, ext);
-		_makepath(fpath, drive, dir, fname, ".BMP");
+		_makepath(fpath, drive, dir, fname, ".png");
 		if (0 == (rsize = fread(cbuf,BSIZE,BANK,fi))) {
 			printf("file read error!! %s\n", *argv);
 			continue;
@@ -76,8 +80,47 @@ void __cdecl main(int argc, char **argv)
 			printf("file open error!! %s\n", fpath);
 			exit(-1);
 		}
-		fwrite(&bHeader,1,sizeof(bHeader),fo);
 		viewmap();
+		unsigned char **image;
+
+		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
+		for (size_t j = 0; j < PNG_HEIGHT; j++)
+			image[j] = (png_bytep)&buf[j];
+
+		png_structp png_ptr;
+		png_infop info_ptr;
+		png_color pal[16] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF},
+							  {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0} };
+
+		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+		if (png_ptr == NULL) {
+			fclose(fo);
+			return;
+	}
+		info_ptr = png_create_info_struct(png_ptr);
+		if (info_ptr == NULL) {
+			png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+			fclose(fo);
+			return;
+		}
+		png_init_io(png_ptr, fo);
+		png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
+			4, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+		png_set_PLTE(png_ptr, info_ptr, pal, 16);
+		png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
+		png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+							   0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+		png_set_tRNS(png_ptr, info_ptr, trans, 16, NULL);
+
+		png_write_info(png_ptr, info_ptr);
+		png_write_image(png_ptr, image);
+		png_write_end(png_ptr, info_ptr);
+		png_destroy_write_struct(&png_ptr, &info_ptr);
+
+
+#if 0
+		fwrite(&bHeader, 1, sizeof(bHeader), fo);
 		for (i=rsize*ROW-1;i>=0;i--) {
 			fwrite(&buf[i],1,COLUMN*8,fo);
 			fwrite(&buf[i],1,COLUMN*8,fo);
@@ -87,6 +130,7 @@ void __cdecl main(int argc, char **argv)
 		bHeader.biHeight = rsize*2*ROW;
 		fseek(fo,0,SEEK_SET);
 		fwrite(&bHeader,1,sizeof(bHeader),fo);
+#endif
 		fclose(fo);
 	}
 }
