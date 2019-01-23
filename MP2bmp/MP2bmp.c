@@ -5,6 +5,8 @@
 #include <signal.h>
 #include <memory.h>
 
+#include "png.h"
+
 #define DLENGTH 0x0C
 #define BMAX	0x80
 #define CMAX	0x80
@@ -14,6 +16,9 @@
 #define DISPW	0x14
 #define FULLBUFCOL (unsigned int)(BMAX*2)
 #define FULLBUFROW (unsigned int)(DLENGTH*ROW*2)
+
+#define PNG_HEIGHT (FULLBUFROW)
+#define PNG_WIDTH (FULLBUFCOL*16)
 
 unsigned short cbuf[CMAX][PLANE][ROW];	/* 8192 byte */
 unsigned char mbuf[BMAX][DLENGTH];	/* 1536 byte */

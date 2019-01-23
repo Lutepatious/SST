@@ -18,7 +18,7 @@
 #define CPAT2	0x10
 #define PMAX	CPAT*CPAT2
 
-#define PNG_HEIGHT (CPAT2*HEIGHT*ROW*2)
+#define PNG_HEIGHT (CPAT2*HEIGHT*ROW)
 #define PNG_WIDTH (CPAT*COLUMN*16)
 
 unsigned short cbuf[CMAX][PLANE][ROW];	/* 16384 byte */
@@ -87,7 +87,7 @@ int _cdecl main(int argc,char **argv)
 
 		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
 		for (size_t j = 0; j < PNG_HEIGHT; j++)
-			image[j] = (png_bytep)& vbuf[j / (2 * ROW*HEIGHT)][(j / (2 * ROW)) % HEIGHT][(j / 2) % ROW];
+			image[j] = (png_bytep)& vbuf[j / (ROW*HEIGHT)][(j / ROW) % HEIGHT][j % ROW];
 
 		if (NULL==(fp=fopen(ofile,"wb")))
 			fprintf(stdout, "file open error!! %s", ofile);
@@ -113,7 +113,8 @@ int _cdecl main(int argc,char **argv)
 			4, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 		png_set_PLTE(png_ptr, info_ptr, pal, 16);
-		png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
+		png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
+		png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 							   0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 		png_set_tRNS(png_ptr, info_ptr, trans, 16, NULL);
 

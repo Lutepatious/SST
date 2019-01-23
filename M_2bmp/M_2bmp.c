@@ -6,6 +6,8 @@
 #include <string.h>
 #include <memory.h>
 
+#include "png.h"
+
 #define DLENGTH 0x0C
 #define BMAX	0x80
 #define CMAX	0x80
@@ -16,49 +18,14 @@
 #define FULLBUFCOL (unsigned int)(BMAX*2)
 #define FULLBUFROW (unsigned int)(DLENGTH*ROW*2)
 
+#define PNG_HEIGHT (FULLBUFROW)
+#define PNG_WIDTH (FULLBUFCOL*16)
+
 unsigned short cbuf[CMAX][PLANE][ROW];	/* 8192 byte */
 unsigned char mbuf[BMAX][DLENGTH];	/* 1536 byte */
 unsigned char ctbuf[CTMAX][2][2];	/*  320 byte */
 
-#pragma pack(1)
-struct rgbq {
-	unsigned char rgbBlue;
-	unsigned char rgbGreen;
-	unsigned char rgbRed;
-	unsigned char rgbReserved;
-};
-struct header {
-	unsigned short bfType;
-	unsigned long bfSize;
-	unsigned short bfReserved1;
-	unsigned short bfReserved2;
-	unsigned long OffBits;
-	unsigned long biSize;
-	unsigned long biWidth;
-	unsigned long biHeight;
-	unsigned short biPlanes;
-	unsigned short biBitCount;
-	unsigned long biCompression;
-	unsigned long biSizeImage;
-	unsigned long biXPelsPerMeter;
-	unsigned long biYPelsPerMeter;
-	unsigned long biClrUsed;
-	unsigned long biClrImportant;
-	struct rgbq RGB0;
-	struct rgbq RGB1;
-	struct rgbq RGB2;
-	struct rgbq RGB3;
-	struct rgbq RGB4;
-	struct rgbq RGB5;
-	struct rgbq RGB6;
-	struct rgbq RGB7;
-} bHeader = {0x4D42,0x60056,0,0,0x56,
-             0x28,0x1000,0xC0,0x1,0x4,0,0xC0000,10000,5000,8,8,
-             {0,0,0,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
-             {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}};
-#pragma pack()
-
-unsigned __int64 bm[192][256];
+unsigned __int64 bm[FULLBUFROW][FULLBUFCOL];
 
 void main(int argc, char **argv);
 void __cdecl ctrlc(int a);
@@ -111,16 +78,44 @@ void main(int argc,char **argv)
 		fclose(fp);
 		for (a=0;a<5;a++) {
 			fname1[5]='0'+a;
-			_makepath(ofile, drive, dir, fname1, ".bmp");
+			_makepath(ofile, drive, dir, fname1, ".png");
 			if (NULL==(fp=fopen(ofile,"wb"))) {
 				printf("file open error!! %s\n", ofile);
 				exit(-1);
 			}
-			fwrite(&bHeader,1,sizeof(bHeader),fp);
 			viewmap(a);
-			for(y=0;y<192;y++) {
-				fwrite(&bm[191-y],1,0x800,fp);
+			unsigned char **image;
+
+			image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
+			for (size_t j = 0; j < PNG_HEIGHT; j++)
+				image[j] = (png_bytep)&bm[j];
+
+			png_structp png_ptr;
+			png_infop info_ptr;
+			png_color pal[8] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF}};
+
+			png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+			if (png_ptr == NULL) {
+				fclose(fp);
+				return;
 			}
+			info_ptr = png_create_info_struct(png_ptr);
+			if (info_ptr == NULL) {
+				png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+				fclose(fp);
+				return;
+			}
+			png_init_io(png_ptr, fp);
+			png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
+				4, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+				PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+			png_set_PLTE(png_ptr, info_ptr, pal, 8);
+			png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
+			png_write_info(png_ptr, info_ptr);
+			png_write_image(png_ptr, image);
+			png_write_end(png_ptr, info_ptr);
+			png_destroy_write_struct(&png_ptr, &info_ptr);
+			free(image);
 			fclose(fp);
 		}
 	}
