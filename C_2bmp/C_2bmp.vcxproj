@@ -23,6 +23,7 @@
     <ProjectGuid>{F7DB5EB3-2354-4F11-9115-20FE02A949FC}</ProjectGuid>
     <RootNamespace>C2bmp</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <ProjectName>C_2PNG</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

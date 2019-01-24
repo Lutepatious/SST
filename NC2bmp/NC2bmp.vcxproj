@@ -23,6 +23,7 @@
     <ProjectGuid>{0E48E0BE-65BE-4CD0-8AF0-1E842BDB5138}</ProjectGuid>
     <RootNamespace>NC2bmp</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <ProjectName>NC2PNG</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

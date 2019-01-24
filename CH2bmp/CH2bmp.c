@@ -42,39 +42,6 @@ unsigned char *BMPFILE[8][3] = {
  {"CH200.png","CH201.png","CH202.png"},{"CH210.png","CH211.png","CH212.png"},
  {"CH300.png","CH301.png","CH302.png"},{"CH310.png","CH311.png","CH312.png"}};
 
-#pragma pack(1)
-struct rgbq {
-	unsigned char rgbBlue;
-	unsigned char rgbGreen;
-	unsigned char rgbRed;
-	unsigned char rgbReserved;
-};
-struct header {
-	unsigned short bfType;
-	unsigned long bfSize;
-	unsigned short bfReserved1;
-	unsigned short bfReserved2;
-	unsigned long OffBits;
-	unsigned long biSize;
-	unsigned long biWidth;
-	unsigned long biHeight;
-	unsigned short biPlanes;
-	unsigned short biBitCount;
-	unsigned long biCompression;
-	unsigned long biSizeImage;
-	unsigned long biXPelsPerMeter;
-	unsigned long biYPelsPerMeter;
-	unsigned long biClrUsed;
-	unsigned long biClrImportant;
-	struct rgbq RGB[0x10];
-} bHeader = {0x4D42,0xC76,0,0,0x76,
-             0x28,0x200,0x30,0x1,0x4,0,0xC00,0,0,16,16,
-             {{0,0,0,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
-             {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0},
-             {0x80,0x80,0x80,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
-             {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}}};
-#pragma pack()
-
 unsigned char *MAPFILE="PLPTR";
 void view(int cnum,int cage);
 
