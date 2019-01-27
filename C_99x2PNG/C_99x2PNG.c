@@ -5,50 +5,16 @@
 #include "png.h"
 
 #define ROW 8
-#define COLUMN 0x10
 #define PLANE 4
-#define BANK 8
-#define BSIZE (ROW*COLUMN*sizeof(unsigned long)*2)
+#define BANK 16
+#define COLUMN 16
 
 #define PNG_HEIGHT (ROW*BANK)
 #define PNG_WIDTH (COLUMN*16)
 
 
-unsigned short cbuf[COLUMN*BANK][PLANE][ROW];
-unsigned __int64 buf[ROW*BANK][COLUMN];
-
-#pragma pack(1)
-struct rgbq {
-	unsigned char rgbBlue;
-	unsigned char rgbGreen;
-	unsigned char rgbRed;
-	unsigned char rgbReserved;
-};
-struct header {
-	unsigned short bfType;
-	unsigned long bfSize;
-	unsigned short bfReserved1;
-	unsigned short bfReserved2;
-	unsigned long OffBits;
-	unsigned long biSize;
-	unsigned long biWidth;
-	unsigned long biHeight;
-	unsigned short biPlanes;
-	unsigned short biBitCount;
-	unsigned long biCompression;
-	unsigned long biSizeImage;
-	unsigned long biXPelsPerMeter;
-	unsigned long biYPelsPerMeter;
-	unsigned long biClrUsed;
-	unsigned long biClrImportant;
-	struct rgbq RGB[0x10];
-} bHeader = {0x4D42,0x76,0,0,0x76,
-             0x28,0x100,0,0x1,0x4,0,0,0,0,16,16,
-             {{0,0,0,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
-             {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0},
-             {0x80,0x80,0x80,0},{0xFF,0,0,0},{0,0,0xFF,0},{0xFF,0,0xFF,0},
-             {0,0xFF,0,0},{0xFF,0xFF,0,0},{0,0xFF,0xFF,0},{0xFF,0xFF,0xFF,0}}};
-#pragma pack()
+unsigned short cbuf[BANK][COLUMN][PLANE-1][ROW];
+unsigned __int64 buf[BANK][ROW][COLUMN];
 
 void __cdecl main(int argc, char **argv);
 void viewmap(void);
@@ -70,7 +36,7 @@ void __cdecl main(int argc, char **argv)
 		_fullpath(fpath, *argv, _MAX_PATH);
 		_splitpath(fpath, drive, dir, fname, ext);
 		_makepath(fpath, drive, dir, fname, ".png");
-		if (0 == (rsize = fread(cbuf,BSIZE,BANK,fi))) {
+		if (0 == (rsize = fread(cbuf,sizeof(cbuf),1,fi))) {
 			printf("file read error!! %s\n", *argv);
 			continue;
 		}
@@ -85,7 +51,7 @@ void __cdecl main(int argc, char **argv)
 
 		image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
 		for (size_t j = 0; j < PNG_HEIGHT; j++)
-			image[j] = (png_bytep)&buf[j];
+			image[j] = (png_bytep)&buf[j/ROW][j%ROW];
 
 		png_structp png_ptr;
 		png_infop info_ptr;
@@ -124,16 +90,16 @@ void __cdecl main(int argc, char **argv)
 
 void viewmap(void)
 {
-	int x,y,i,j,index;
+	int index;
 	unsigned short aimage;
 
 	memset(buf,0,sizeof(buf));
 
-	for (j=0;j<BANK;j++)
-	for (y=0;y<ROW;y++)
-	for (x=0;x<COLUMN;x++)
-	for (i=0;i<PLANE;i++) {
-		aimage = cbuf[x+j*COLUMN][i][y];
+	for (size_t j=0;j<BANK;j++)
+	for (size_t y=0;y<ROW;y++)
+	for (size_t x = 0; x < COLUMN; x++)
+	for (size_t i=0;i<PLANE-1;i++) {
+		aimage = cbuf[j][x][i][y];
 		union _t {
 			unsigned __int64 a8;
 			unsigned __int32 a4[2];
@@ -150,7 +116,7 @@ void viewmap(void)
 		for (index=0;index<16;index++) {
 			if (aimage & (1 << index)) {
 				u.a8 |= 1LL << (index * PLANE);
-				buf[y + j * ROW][x] |= ((unsigned __int64)_byteswap_ulong(u.a4[0]) | ((unsigned __int64)_byteswap_ulong(u.a4[1]) << 32)) << i;
+				buf[j][y][x] |= ((unsigned __int64)_byteswap_ulong(u.a4[0]) | ((unsigned __int64)_byteswap_ulong(u.a4[1]) << 32)) << i;
 			}
 		}
 	}

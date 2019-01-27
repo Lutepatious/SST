@@ -1,0 +1,213 @@
+/* sorcerian character view program */
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <memory.h>
+#include <errno.h>
+#include <sys/types.h>
+
+#include "png.h"
+
+#define CMAX 32
+#define PLANE 4
+#define ROW 8
+#define BITSpPIX 8
+
+#define PCOL 8
+#define PROW 8
+#define PMAX 4
+
+#define PNG_HEIGHT (CMAX*ROW)
+#define PNG_WIDTH (16)
+
+#define P_HEIGHT (PMAX*PROW*ROW)
+#define P_WIDTH (PCOL*16)
+
+enum { C_BLUE = 0, C_RED, C_GREEN, C_ALPHA };
+
+const unsigned char *cfiles = "C_600";
+const unsigned char *pfiles = "P_600";
+const unsigned char *cfiles_out = "C_600.png";
+const unsigned char *pfiles_out = "P_600.png";
+
+unsigned __int8 cbuf[CMAX][PLANE][ROW][2];	/* 2048 bytes = 16 * 8 * 4 * 32 */
+unsigned __int8 pbuf[PMAX][PROW][PCOL];	/* 256 bytes = 8 * 8 * 4 */
+
+unsigned __int64 decoded_pattern[CMAX][ROW][2];
+unsigned __int64 vbuf[PMAX][PROW][ROW][PCOL][2];
+
+void imout(void);
+
+short cfset = 0;
+
+#pragma pack(1)
+void decode_16bit_wide(void)
+{
+	for (size_t pat = 0; pat < CMAX; pat++) {
+		for (size_t y = 0; y < ROW; y++) {
+			union {
+				__int64 a;
+				__int8 a8[8];
+			} u[2];
+			for (size_t x = 0; x < 8; x++) {
+				u[0].a8[x] = (!!(cbuf[pat][0][y][0] & (1 << x))) | (!!(cbuf[pat][1][y][0] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][0] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][0] & (1 << x))) << 3;
+				u[1].a8[x] = (!!(cbuf[pat][0][y][1] & (1 << x))) | (!!(cbuf[pat][1][y][1] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][1] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][0] & (1 << x))) << 3;
+			}
+			decoded_pattern[pat][y][0] = _byteswap_uint64(u[0].a);
+			decoded_pattern[pat][y][1] = _byteswap_uint64(u[1].a);
+		}
+	}
+}
+#pragma pack()
+
+void box_copy(size_t c, size_t p, size_t py, size_t px, unsigned __int8 index)
+{
+	for (size_t r = 0; r < ROW; r++) {
+		vbuf[c][py][r][px][0] = decoded_pattern[index][r][0];
+		vbuf[c][py][r][px][1] = decoded_pattern[index][r][1];
+	}
+}
+
+int main(void)
+{
+	FILE *pFi, *pFo;
+
+	errno_t ecode = fopen_s(&pFi, cfiles, "rb");
+
+	if (ecode) {
+		fprintf_s(stderr, "File open error %s.\n", cfiles);
+		exit(ecode);
+	}
+	size_t rcount = fread_s(cbuf, sizeof(cbuf), sizeof(cbuf), 1, pFi);
+	if (rcount != 1) {
+		fprintf_s(stderr, "File read error %s.\n", cfiles);
+		fclose(pFi);
+		exit(-2);
+	}
+	fclose(pFi);
+
+	ecode = fopen_s(&pFi, pfiles, "rb");
+	if (ecode) {
+		fprintf_s(stderr, "File open error %s.\n", pfiles);
+		exit(ecode);
+	}
+	rcount = fread_s(pbuf, sizeof(pbuf), sizeof(pbuf), 1, pFi);
+	if (rcount != 1) {
+		fprintf_s(stderr, "File read error %s.\n", pfiles);
+		fclose(pFi);
+		exit(-2);
+	}
+	fclose(pFi);
+	decode_16bit_wide();
+
+	ecode = fopen_s(&pFo, cfiles_out, "wb");
+	if (ecode) {
+		fprintf_s(stderr, "File open error %s.\n", cfiles_out);
+		exit(ecode);
+	}
+
+	png_structp png_ptr;
+	png_infop info_ptr;
+	png_color pal[16] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF},
+						  {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0} };
+
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (png_ptr == NULL) {
+		fclose(pFo);
+		return;
+	}
+	info_ptr = png_create_info_struct(png_ptr);
+	if (info_ptr == NULL) {
+		png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+		fclose(pFo);
+		return;
+	}
+
+	unsigned char **image;
+	image = (png_bytepp)malloc(PNG_HEIGHT * sizeof(png_bytep));
+	if (image == NULL) {
+		fprintf_s(stderr, "Memory allocation error.\n");
+		fclose(pFo);
+		exit(-2);
+	}
+	for (size_t j = 0; j < PNG_HEIGHT; j++)
+		image[j] = (png_bytep)&decoded_pattern[j / ROW][j % ROW];
+
+
+	png_init_io(png_ptr, pFo);
+	png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
+		BITSpPIX, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_set_PLTE(png_ptr, info_ptr, pal, 16);
+	png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
+	png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+						   0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+	png_set_tRNS(png_ptr, info_ptr, trans, 16, NULL);
+
+	png_write_info(png_ptr, info_ptr);
+	png_write_image(png_ptr, image);
+	png_write_end(png_ptr, info_ptr);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
+
+	free(image);
+	fclose(pFo);
+
+#if 0
+	for (size_t chara = 0; chara < PMAX; chara++) {
+		for (size_t p_col = 0; p_col < PCOL; p_col++) {
+			if (p_col & 1) {
+				for (size_t p_row = 0; p_row < PROW; p_row++) {
+					box_copy(chara, pattern, p_row, p_col, pbuf[chara][pattern][p_col][p_row]);
+				}
+			}
+			else {
+				for (size_t p_row = 0; p_row < PROW; p_row++) {
+					box_copy(chara, pattern, PROW - 1 - p_row, p_col, pbuf[chara][pattern][p_col][p_row]);
+				}
+			}
+		}
+	}
+
+	ecode = fopen_s(&pFo, pfiles_out, "wb");
+	if (ecode) {
+		fprintf_s(stderr, "File open error %s.\n", pfiles_out);
+		exit(ecode);
+	}
+
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (png_ptr == NULL) {
+		fclose(pFo);
+		return;
+	}
+	info_ptr = png_create_info_struct(png_ptr);
+	if (info_ptr == NULL) {
+		png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+		fclose(pFo);
+		return;
+	}
+
+	image = (png_bytepp)malloc(P_HEIGHT * sizeof(png_bytep));
+	if (image == NULL) {
+		fprintf_s(stderr, "Memory allocation error.\n");
+		fclose(pFo);
+		exit(-2);
+	}
+	for (size_t j = 0; j < P_HEIGHT; j++)
+		image[j] = (png_bytep)&vbuf[j / (PROW * ROW)][(j / ROW) % PROW][j % ROW];
+
+	png_init_io(png_ptr, pFo);
+	png_set_IHDR(png_ptr, info_ptr, P_WIDTH, P_HEIGHT,
+		BITSpPIX, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_set_PLTE(png_ptr, info_ptr, pal, 8);
+	png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
+	png_write_info(png_ptr, info_ptr);
+	png_write_image(png_ptr, image);
+	png_write_end(png_ptr, info_ptr);
+	png_destroy_write_struct(&png_ptr, &info_ptr);
+
+	free(image);
+	fclose(pFo);
+#endif
+	exit(0);
+}
