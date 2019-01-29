@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CH2bmp.c">
+    <ClCompile Include="CH2PNG.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

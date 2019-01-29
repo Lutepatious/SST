@@ -24,10 +24,6 @@
 #define P_HEIGHT (PMAX*PROW*ROW)
 #define P_WIDTH (CPAT*PCOL*16)
 
-
-
-
-
 #define P_FILES 3
 
 enum { C_BLUE = 0, C_RED, C_GREEN, C_ALPHA };
@@ -42,10 +38,6 @@ unsigned __int8 pbuf[PMAX][CPAT][PROW][PCOL];	/* 1024 bytes = 8 * 8 * 2 * 8 */
 
 unsigned __int64 decoded_pattern[CMAX][ROW][2];
 unsigned __int64 vbuf[PMAX][PROW][ROW][CPAT][PCOL][2];
-
-void imout(void);
-
-short cfset=0;
 
 #pragma pack(1)
 void decode_16bit_wide_3plane(void)
@@ -66,6 +58,17 @@ void decode_16bit_wide_3plane(void)
 	}
 }
 #pragma pack()
+
+unsigned __int8 maximum_colour_code(void)
+{
+	unsigned __int8 *d = decoded_pattern, max_ccode = 0;
+	for (size_t c = 0; c < CMAX*ROW * 16; c++) {
+		if (max_ccode < d[c]) {
+			max_ccode = d[c];
+		}
+	}
+	return max_ccode;
+}
 
 void box_copy(size_t c, size_t p, size_t py, size_t px, unsigned __int8 index)
 {
@@ -112,6 +115,7 @@ int main(void)
 			fprintf_s(stderr, "File open error %s.\n", cfiles_out[nfile]);
 			exit(ecode);
 		}
+		unsigned __int8 colours = maximum_colour_code() + 1;
 
 		png_structp png_ptr;
 		png_infop info_ptr;
@@ -139,12 +143,11 @@ int main(void)
 		for (size_t j = 0; j < PNG_HEIGHT; j++)
 			image[j] = (png_bytep)&decoded_pattern[j / ROW][j % ROW];
 
-
 		png_init_io(png_ptr, pFo);
 		png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
 			BITSpPIX, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-		png_set_PLTE(png_ptr, info_ptr, pal, 8);
+		png_set_PLTE(png_ptr, info_ptr, pal, colours);
 		png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
 		png_write_info(png_ptr, info_ptr);
 		png_write_image(png_ptr, image);
@@ -201,7 +204,7 @@ int main(void)
 		png_set_IHDR(png_ptr, info_ptr, P_WIDTH, P_HEIGHT,
 			BITSpPIX, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-		png_set_PLTE(png_ptr, info_ptr, pal, 8);
+		png_set_PLTE(png_ptr, info_ptr, pal, colours);
 		png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
 		png_write_info(png_ptr, info_ptr);
 		png_write_image(png_ptr, image);

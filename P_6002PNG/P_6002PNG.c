@@ -36,10 +36,6 @@ unsigned __int8 pbuf[PMAX][PROW][PCOL];	/* 256 bytes = 8 * 8 * 4 */
 unsigned __int64 decoded_pattern[CMAX][ROW][2];
 unsigned __int64 vbuf[PMAX][PROW][ROW][PCOL][2];
 
-void imout(void);
-
-short cfset = 0;
-
 #pragma pack(1)
 void decode_16bit_wide(void)
 {
@@ -51,7 +47,7 @@ void decode_16bit_wide(void)
 			} u[2];
 			for (size_t x = 0; x < 8; x++) {
 				u[0].a8[x] = (!!(cbuf[pat][0][y][0] & (1 << x))) | (!!(cbuf[pat][1][y][0] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][0] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][0] & (1 << x))) << 3;
-				u[1].a8[x] = (!!(cbuf[pat][0][y][1] & (1 << x))) | (!!(cbuf[pat][1][y][1] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][1] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][0] & (1 << x))) << 3;
+				u[1].a8[x] = (!!(cbuf[pat][0][y][1] & (1 << x))) | (!!(cbuf[pat][1][y][1] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][1] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][1] & (1 << x))) << 3;
 			}
 			decoded_pattern[pat][y][0] = _byteswap_uint64(u[0].a);
 			decoded_pattern[pat][y][1] = _byteswap_uint64(u[1].a);
@@ -59,6 +55,17 @@ void decode_16bit_wide(void)
 	}
 }
 #pragma pack()
+
+unsigned __int8 maximum_colour_code(void)
+{
+	unsigned __int8 *d = decoded_pattern, max_ccode = 0;
+	for (size_t c = 0; c < CMAX*ROW * 16; c++) {
+		if (max_ccode < d[c]) {
+			max_ccode = d[c];
+		}
+	}
+	return max_ccode;
+}
 
 void box_copy(size_t c, size_t p, size_t py, size_t px, unsigned __int8 index)
 {
@@ -105,11 +112,12 @@ int main(void)
 		fprintf_s(stderr, "File open error %s.\n", cfiles_out);
 		exit(ecode);
 	}
+	unsigned __int8 colours = maximum_colour_code() + 1;
 
 	png_structp png_ptr;
 	png_infop info_ptr;
 	png_color pal[16] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF},
-						  {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0}, {0,0,0} };
+						  {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF} };
 
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (png_ptr == NULL) {
@@ -138,11 +146,11 @@ int main(void)
 	png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
 		BITSpPIX, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-	png_set_PLTE(png_ptr, info_ptr, pal, 16);
+	png_set_PLTE(png_ptr, info_ptr, pal, colours);
 	png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
 	png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 						   0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-	png_set_tRNS(png_ptr, info_ptr, trans, 16, NULL);
+	png_set_tRNS(png_ptr, info_ptr, trans, colours, NULL);
 
 	png_write_info(png_ptr, info_ptr);
 	png_write_image(png_ptr, image);
