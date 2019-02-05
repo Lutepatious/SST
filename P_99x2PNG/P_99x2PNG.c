@@ -33,29 +33,39 @@ const unsigned char *pfiles[3] = { "P_990", "P_991", "P_992" };
 const unsigned char *cfiles_out[3] = { "C_990.png", "C_991.png", "C_992.png" };
 const unsigned char *pfiles_out[3] = { "P_990.png", "P_991.png", "P_992.png" };
 
-unsigned __int8 cbuf3[CMAX][PLANE-1][ROW][2];	/* 12288 bytes = 16 * 8 * 3 * 256 */
+unsigned __int8 cbuf3[CMAX][PLANE - 1][ROW][2];	/* 12288 bytes = 16 * 8 * 3 * 256 */
 unsigned __int8 pbuf[PMAX][CPAT][PROW][PCOL];	/* 1024 bytes = 8 * 8 * 2 * 8 */
 
 unsigned __int64 decoded_pattern[CMAX][ROW][2];
 unsigned __int64 vbuf[PMAX][PROW][ROW][CPAT][PCOL][2];
 
 #pragma pack(1)
-void decode_16bit_wide_3plane(void)
+unsigned __int8 decode_w16_pl3(unsigned __int64(*dst)[ROW][2], const unsigned __int8(*src)[PLANE - 1][ROW][2], size_t len)
 {
-	for (size_t pat = 0; pat < CMAX; pat++) {
+	unsigned __int8 max_ccode = 0;
+	while (len--) {
 		for (size_t y = 0; y < ROW; y++) {
 			union {
 				__int64 a;
 				__int8 a8[8];
 			} u[2];
 			for (size_t x = 0; x < 8; x++) {
-				u[0].a8[x] = (!!(cbuf3[pat][0][y][0] & (1 << x))) | (!!(cbuf3[pat][1][y][0] & (1 << x))) << 1 | (!!(cbuf3[pat][2][y][0] & (1 << x))) << 2;
-				u[1].a8[x] = (!!(cbuf3[pat][0][y][1] & (1 << x))) | (!!(cbuf3[pat][1][y][1] & (1 << x))) << 1 | (!!(cbuf3[pat][2][y][1] & (1 << x))) << 2;
+				u[0].a8[x] = (((*src)[0][y][0] & (1 << x)) ? 1 : 0) | (((*src)[1][y][0] & (1 << x)) ? 2 : 0) | (((*src)[2][y][0] & (1 << x)) ? 4 : 0);
+				u[1].a8[x] = (((*src)[0][y][1] & (1 << x)) ? 1 : 0) | (((*src)[1][y][1] & (1 << x)) ? 2 : 0) | (((*src)[2][y][1] & (1 << x)) ? 4 : 0);
+				if (max_ccode < u[0].a8[x]) {
+					max_ccode = u[0].a8[x];
+				}
+				if (max_ccode < u[1].a8[x]) {
+					max_ccode = u[1].a8[x];
+				}
 			}
-			decoded_pattern[pat][y][0] = _byteswap_uint64(u[0].a);
-			decoded_pattern[pat][y][1] = _byteswap_uint64(u[1].a);
+			(*dst)[y][0] = _byteswap_uint64(u[0].a);
+			(*dst)[y][1] = _byteswap_uint64(u[1].a);
 		}
+		src++;
+		dst++;
 	}
+	return max_ccode + 1;
 }
 #pragma pack()
 
@@ -108,18 +118,18 @@ int main(void)
 			exit(-2);
 		}
 		fclose(pFi);
-		decode_16bit_wide_3plane();
+
+		unsigned __int8 colours = decode_w16_pl3(decoded_pattern, cbuf3, CMAX);
 
 		ecode = fopen_s(&pFo, cfiles_out[nfile], "wb");
 		if (ecode) {
 			fprintf_s(stderr, "File open error %s.\n", cfiles_out[nfile]);
 			exit(ecode);
 		}
-		unsigned __int8 colours = maximum_colour_code() + 1;
 
 		png_structp png_ptr;
 		png_infop info_ptr;
-		png_color pal[8] = {{0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF}};
+		png_color pal[8] = { {0,0,0}, {0,0,0xFF}, {0xFF,0,0}, {0xFF,0,0xFF}, {0,0xFF,0}, {0,0xFF,0xFF}, {0xFF,0xFF,0}, {0xFF,0xFF,0xFF} };
 
 		png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 		if (png_ptr == NULL) {
@@ -164,7 +174,8 @@ int main(void)
 						for (size_t p_row = 0; p_row < PROW; p_row++) {
 							box_copy(chara, pattern, p_row, p_col, pbuf[chara][pattern][p_col][p_row]);
 						}
-					} else {
+					}
+					else {
 						for (size_t p_row = 0; p_row < PROW; p_row++) {
 							box_copy(chara, pattern, PROW - 1 - p_row, p_col, pbuf[chara][pattern][p_col][p_row]);
 						}

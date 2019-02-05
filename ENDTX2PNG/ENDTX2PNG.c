@@ -31,8 +31,8 @@ void decode_16bit_wide_mono(void)
 				__int8 a8[8];
 			} u[2];
 			for (size_t x = 0; x < 8; x++) {
-				u[0].a8[x] = (!!(mbuf[pat][y][0] & (1 << x)));
-				u[1].a8[x] = (!!(mbuf[pat][y][1] & (1 << x)));
+				u[0].a8[x] = (mbuf[pat][y][0] & (1 << x)) ? 1 : 0;
+				u[1].a8[x] = (mbuf[pat][y][1] & (1 << x)) ? 1 : 0;
 			}
 			decoded_pattern[pat][y][0] = _byteswap_uint64(u[0].a);
 			decoded_pattern[pat][y][1] = _byteswap_uint64(u[1].a);

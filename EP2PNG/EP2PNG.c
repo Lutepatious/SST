@@ -60,53 +60,34 @@ unsigned __int8 wbuf[WMAX][PLANE][ROW][2];	/* 512 bytes = 16 * 8 * 4 * 8 */
 unsigned __int64 decoded_pattern_w[WMAX][ROW][2];
 
 #pragma pack(1)
-void decode_16bit_wide(void)
+unsigned __int8 decode_w16(unsigned __int64 (*dst)[ROW][2], const unsigned __int8 (*src)[PLANE][ROW][2], size_t len)
 {
-	for (size_t pat = 0; pat < CMAX; pat++) {
+	unsigned __int8 max_ccode = 0;
+	while (len--) {
 		for (size_t y = 0; y < ROW; y++) {
 			union {
 				__int64 a;
 				__int8 a8[8];
 			} u[2];
 			for (size_t x = 0; x < 8; x++) {
-				u[0].a8[x] = (!!(cbuf[pat][0][y][0] & (1 << x))) | (!!(cbuf[pat][1][y][0] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][0] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][0] & (1 << x))) << 3;
-				u[1].a8[x] = (!!(cbuf[pat][0][y][1] & (1 << x))) | (!!(cbuf[pat][1][y][1] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][1] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][1] & (1 << x))) << 3;
+				u[0].a8[x] = (((*src)[0][y][0] & (1 << x)) ? 1 : 0) | (((*src)[1][y][0] & (1 << x)) ? 2 : 0) | (((*src)[2][y][0] & (1 << x)) ? 4 : 0) | (((*src)[3][y][0] & (1 << x)) ? 8 : 0);
+				u[1].a8[x] = (((*src)[0][y][1] & (1 << x)) ? 1 : 0) | (((*src)[1][y][1] & (1 << x)) ? 2 : 0) | (((*src)[2][y][1] & (1 << x)) ? 4 : 0) | (((*src)[3][y][1] & (1 << x)) ? 8 : 0);
+				if (max_ccode < u[0].a8[x]) {
+					max_ccode = u[0].a8[x];
+				}
+				if (max_ccode < u[1].a8[x]) {
+					max_ccode = u[1].a8[x];
+				}
 			}
-			decoded_pattern[pat][y][0] = _byteswap_uint64(u[0].a);
-			decoded_pattern[pat][y][1] = _byteswap_uint64(u[1].a);
+			(*dst)[y][0] = _byteswap_uint64(u[0].a);
+			(*dst)[y][1] = _byteswap_uint64(u[1].a);
 		}
+		src++;
+		dst++;
 	}
-}
-
-void decode_16bit_wide_w(void)
-{
-	for (size_t pat = 0; pat < WMAX; pat++) {
-		for (size_t y = 0; y < ROW; y++) {
-			union {
-				__int64 a;
-				__int8 a8[8];
-			} u[2];
-			for (size_t x = 0; x < 8; x++) {
-				u[0].a8[x] = (!!(wbuf[pat][0][y][0] & (1 << x))) | (!!(wbuf[pat][1][y][0] & (1 << x))) << 1 | (!!(wbuf[pat][2][y][0] & (1 << x))) << 2 | (!!(wbuf[pat][3][y][0] & (1 << x))) << 3;
-				u[1].a8[x] = (!!(wbuf[pat][0][y][1] & (1 << x))) | (!!(wbuf[pat][1][y][1] & (1 << x))) << 1 | (!!(wbuf[pat][2][y][1] & (1 << x))) << 2 | (!!(wbuf[pat][3][y][1] & (1 << x))) << 3;
-			}
-			decoded_pattern_w[pat][y][0] = _byteswap_uint64(u[0].a);
-			decoded_pattern_w[pat][y][1] = _byteswap_uint64(u[1].a);
-		}
-	}
+	return max_ccode + 1;
 }
 #pragma pack()
-
-unsigned __int8 maximum_colour_code(void)
-{
-	unsigned __int8 *d = decoded_pattern, max_ccode = 0;
-	for (size_t c = 0; c < CMAX*ROW * 16; c++) {
-		if (max_ccode < d[c]) {
-			max_ccode = d[c];
-		}
-	}
-	return max_ccode;
-}
 
 void box_copy(size_t py, size_t px, unsigned __int8 index)
 {
@@ -154,14 +135,14 @@ int main(void)
 			exit(-2);
 		}
 		fclose(pFi);
-		decode_16bit_wide();
+
+		unsigned __int8 colours = decode_w16(decoded_pattern, cbuf, CMAX);
 
 		ecode = fopen_s(&pFo, cfiles_out[nfile], "wb");
 		if (ecode) {
 			fprintf_s(stderr, "File open error %s.\n", cfiles_out[nfile]);
 			exit(ecode);
 		}
-		unsigned __int8 colours = maximum_colour_code() + 1;
 
 		png_structp png_ptr;
 		png_infop info_ptr;
@@ -239,7 +220,7 @@ int main(void)
 		}
 		fclose(pFi);
 
-		decode_16bit_wide_w();
+		decode_w16(decoded_pattern_w, wbuf, WMAX);
 		box_copy_w(0, 0, 0);
 		box_copy_w(0, 1, 1);
 		box_copy_w(0, 2, 1);

@@ -53,35 +53,34 @@ chpat pattern[P_RACE][P_SEX][P_AGE + 1];
 unsigned __int64 vbuf[PROW][ROW][PMAX][PCOL + 2][2];
 
 #pragma pack(1)
-void decode_16bit_wide(void)
+unsigned __int8 decode_w16(unsigned __int64(*dst)[ROW][2], const unsigned __int8(*src)[PLANE][ROW][2], size_t len)
 {
-	for (size_t pat = 0; pat < CMAX; pat++) {
+	unsigned __int8 max_ccode = 0;
+	while (len--) {
 		for (size_t y = 0; y < ROW; y++) {
 			union {
 				__int64 a;
 				__int8 a8[8];
 			} u[2];
 			for (size_t x = 0; x < 8; x++) {
-				u[0].a8[x] = (!!(cbuf[pat][0][y][0] & (1 << x))) | (!!(cbuf[pat][1][y][0] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][0] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][0] & (1 << x))) << 3;
-				u[1].a8[x] = (!!(cbuf[pat][0][y][1] & (1 << x))) | (!!(cbuf[pat][1][y][1] & (1 << x))) << 1 | (!!(cbuf[pat][2][y][1] & (1 << x))) << 2 | (!!(cbuf[pat][3][y][1] & (1 << x))) << 3;
+				u[0].a8[x] = (((*src)[0][y][0] & (1 << x)) ? 1 : 0) | (((*src)[1][y][0] & (1 << x)) ? 2 : 0) | (((*src)[2][y][0] & (1 << x)) ? 4 : 0) | (((*src)[3][y][0] & (1 << x)) ? 8 : 0);
+				u[1].a8[x] = (((*src)[0][y][1] & (1 << x)) ? 1 : 0) | (((*src)[1][y][1] & (1 << x)) ? 2 : 0) | (((*src)[2][y][1] & (1 << x)) ? 4 : 0) | (((*src)[3][y][1] & (1 << x)) ? 8 : 0);
+				if (max_ccode < u[0].a8[x]) {
+					max_ccode = u[0].a8[x];
+				}
+				if (max_ccode < u[1].a8[x]) {
+					max_ccode = u[1].a8[x];
+				}
 			}
-			decoded_pattern[pat][y][0] = _byteswap_uint64(u[0].a);
-			decoded_pattern[pat][y][1] = _byteswap_uint64(u[1].a);
+			(*dst)[y][0] = _byteswap_uint64(u[0].a);
+			(*dst)[y][1] = _byteswap_uint64(u[1].a);
 		}
+		src++;
+		dst++;
 	}
+	return max_ccode + 1;
 }
 #pragma pack()
-
-unsigned __int8 maximum_colour_code(void)
-{
-	unsigned __int8 *d = decoded_pattern, max_ccode = 0;
-	for (size_t c = 0; c < CMAX*ROW * 16; c++) {
-		if (max_ccode < d[c]) {
-			max_ccode = d[c];
-		}
-	}
-	return max_ccode;
-}
 
 void box_copy(size_t pat, size_t py, size_t px, unsigned __int8 index)
 {
@@ -123,9 +122,7 @@ int main(void)
 		}
 		fclose(pFi);
 
-		decode_16bit_wide();
-		unsigned __int8 colours = maximum_colour_code() + 1;
-
+		unsigned __int8 colours = decode_w16(decoded_pattern, cbuf, CMAX);
 
 		for (size_t pat = 0; pat < PMAX; pat++) {
 			for (size_t p_col = 0; p_col < PCOL; p_col++) {
@@ -147,9 +144,6 @@ int main(void)
 		box_copy(5, 1, 3, 30);
 		box_copy(6, 1, 0, 31);
 		box_copy(7, 1, 0, 31);
-
-		printf_s("Processing %s.\n", chfiles_out[nfile]);
-
 
 		ecode = fopen_s(&pFo, chfiles_out[nfile], "wb");
 		if (ecode) {
@@ -187,11 +181,11 @@ int main(void)
 		png_set_IHDR(png_ptr, info_ptr, PNG_WIDTH, PNG_HEIGHT,
 			BITSpPIX, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
 			PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-		png_set_PLTE(png_ptr, info_ptr, pal, 16);
+		png_set_PLTE(png_ptr, info_ptr, pal, colours);
 		png_set_pHYs(png_ptr, info_ptr, 2, 1, PNG_RESOLUTION_UNKNOWN);
 		png_byte trans[16] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 							   0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-		png_set_tRNS(png_ptr, info_ptr, trans, 16, NULL);
+		png_set_tRNS(png_ptr, info_ptr, trans, colours, NULL);
 
 		png_write_info(png_ptr, info_ptr);
 		png_write_image(png_ptr, image);
